@@ -1,7 +1,7 @@
 import numpy as np
 import datetime
 from dataclasses import dataclass
-from shared.CameraEnum import CameraEnum
+from dep.camerautils.CameraEnum import CameraEnum
 
 @dataclass(slots = True)
 class GrabbedImage:
