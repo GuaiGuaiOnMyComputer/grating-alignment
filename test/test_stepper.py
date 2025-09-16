@@ -1,13 +1,12 @@
-import logging
 import os
-import sys
-import pypylon.pylon
-import json
+import logging
+import asyncio
 from typing import Tuple, List
 from logging import Handler, StreamHandler, FileHandler
-from dep.camerautils.Pylon.PylonCameraWrapper import PylonCameraWrapper
-from dep.camerautils.PixelFormatEnum import PixelFormatEnum
+from tmc_driver.tmc_2209 import MovementAbsRel
+from grating_alignment.StepperMotorWrapper import Tmc2209StepperWrapperFactory, Tmc220xStepperWrapper
 from shared.LoggingFormatter import ColoredLoggingFormatter
+
 
 def _initialize_logger(logger_name:str, log_to_console:bool = True, log_to_file:bool = False, log_level = logging.INFO) -> Tuple[logging.Logger, List[Handler]]:
     logger:logging.Logger = logging.getLogger(logger_name)
@@ -33,30 +32,27 @@ def _initialize_logger(logger_name:str, log_to_console:bool = True, log_to_file:
     logger.propagate = False
     return logger, handlers
 
+async def main():
+    main_logger, _ = _initialize_logger(__name__)
+    main_logger.info("Running stepper test...")
 
-def _acquire_pylon_camera_wrapper(logger:logging.Logger) -> PylonCameraWrapper | None:
+    stepper_logger, stepper_handlers = _initialize_logger("stepper", log_to_console = True)
+    stepper_logger.info("Creating stepper...")
+    stepper: Tmc220xStepperWrapper = Tmc2209StepperWrapperFactory.create(
+        enable_pin = 10,
+        step_signal_pin = 11,
+        step_direction_pin = 12,
+        log_prefix = "stepper",
+        log_formatter = ColoredLoggingFormatter.instance(),
+        log_handler = stepper_handlers
+    )
+    stepper.set_motor_enabled(True)
 
-    camera: PylonCameraWrapper | None = None
-    try:
-        pylon_camera = pypylon.pylon.TlFactory.GetInstance().CreateFirstDevice()
-        camera = PylonCameraWrapper(pylon_camera, PixelFormatEnum.BGR8, logger)
-    except pypylon.pylon.RuntimeException as e:
-        logger.error(f"Error initializing pylon camera: {e}")
+    await stepper.run_to_position_steps_async(1000, MovementAbsRel.RELATIVE)
+    stepper.stop()
+    stepper.emergency_stop()
 
-    return camera
-
-def main():
-    main_logger, _ = _initialize_logger(__name__, log_to_console = True)
-    pylon_logger, _ = _initialize_logger("pylon", log_to_console = True)
-
-    main_logger.info("Starting application...")
-    camera: PylonCameraWrapper | None = _acquire_pylon_camera_wrapper(pylon_logger)
-    if camera is None:
-        sys.exit(1)
-
-    camera.initialize_camera()
-    main_logger.info(json.dumps(camera.get_camera_info(), indent = 4))
-    camera.start_camera_streaming()
+    main_logger.info("Stepper move completed.")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
