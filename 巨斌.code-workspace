@@ -4,5 +4,36 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Run main program",
+				"type": "shell",
+				"command": "python",
+				"args": ["${workspaceFolder}/grating_alignment/main.py"],
+				"options": {
+					"cwd": "${workspaceFolder}/grating_alignment"
+				}
+			}
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Debug main program",
+				"type": "debugpy",
+				"request": "launch",
+				"program": "${workspaceFolder}/grating_alignment/main.py",
+				"console": "integratedTerminal",
+				"justMyCode": false,
+				"env": {
+					"PYTHONPATH": "${workspaceFolder}"
+				}
+			}
+		]
+	}
 }
