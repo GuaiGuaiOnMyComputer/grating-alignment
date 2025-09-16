@@ -7,10 +7,9 @@ from typing import Tuple
 from pypylon.pylon import TimeoutHandling_ThrowException, TimeoutException
 from pypylon.pylon import InstantCamera, GrabResult
 from pypylon.genicam import INodeMap, IEnumeration, IEnumEntry, INode, IFloat, IInteger, IBoolean
-from shared.GrabbedImage import GrabbedImage
-from shared.CameraEnum import CameraEnum
-from shared.FrameProviderAbc import FrameProviderAbc
-from shared.SettingPersistentCameraAbc import SettingPersistentCameraAbc
+from dep.camerautils.GrabbedImage import GrabbedImage
+from dep.camerautils.FrameProviderAbc import FrameProviderAbc
+from dep.camerautils.SettingPersistentCameraAbc import SettingPersistentCameraAbc
 
 class PylonCameraWrapper(FrameProviderAbc, SettingPersistentCameraAbc):
     """
