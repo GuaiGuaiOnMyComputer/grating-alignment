@@ -1,16 +1,18 @@
 import logging
 import datetime
 import pypylon.pylon
+from pathlib import Path
 from os import path, makedirs
 from pypylon import pylon
 from typing import Tuple
-from pypylon.pylon import TimeoutHandling_ThrowException, TimeoutException
+from pypylon.pylon import TimeoutHandling_ThrowException, TimeoutException, ImageFormatConverter
 from pypylon.pylon import InstantCamera, GrabResult
 from pypylon.genicam import INodeMap, IEnumeration, IEnumEntry, INode, IFloat, IInteger, IBoolean
-from shared.GrabbedImage import GrabbedImage
-from shared.CameraEnum import CameraEnum
-from shared.FrameProviderAbc import FrameProviderAbc
-from shared.SettingPersistentCameraAbc import SettingPersistentCameraAbc
+from ..GrabbedImage import GrabbedImage
+from ..CameraEnum import CameraEnum
+from ..FrameProviderAbc import FrameProviderAbc
+from ..SettingPersistentCameraAbc import SettingPersistentCameraAbc
+from ..PixelFormatEnum import PixelFormatEnum
 
 class PylonCameraWrapper(FrameProviderAbc, SettingPersistentCameraAbc):
     """
@@ -18,11 +20,15 @@ class PylonCameraWrapper(FrameProviderAbc, SettingPersistentCameraAbc):
     Implements the FrameProviderAbc interface.
     """
 
-    def __init__(self, camera: InstantCamera, logger: logging.Logger | None = None):
+    def __init__(self, camera: InstantCamera, pixel_format:PixelFormatEnum = PixelFormatEnum.BGR8, logger: logging.Logger | None = None):
 
         self.__camera: InstantCamera = InstantCamera(camera)
         self.__node_map: INodeMap | None = None
         self.__camera_name: str = ""
+        self.__pixel_format = pixel_format
+        self.__pylon_image_converter = ImageFormatConverter()
+        self.__pylon_image_converter.OutputPixelFormat = PylonCameraWrapper.__get_pylon_pixel_format(pixel_format)
+        
         if logger is not None:
             self.__logger: logging.Logger = logger
         else:
@@ -75,7 +81,7 @@ class PylonCameraWrapper(FrameProviderAbc, SettingPersistentCameraAbc):
             return RuntimeError("Failed to grab image.")
 
         return GrabbedImage(
-            image = grab_image_result.GetArray(),
+            image = self.__pylon_image_converter.Convert(grab_image_result).GetArray(),
             timestamp = datetime.datetime.now(),
             camera = CameraEnum.Pylon,
             additional_info = {
@@ -83,7 +89,7 @@ class PylonCameraWrapper(FrameProviderAbc, SettingPersistentCameraAbc):
             }
         )
 
-    def save_camera_settings(self, file_path:str) -> Exception | None:
+    def save_camera_settings(self, file_path:str | Path) -> Exception | None:
         """
         Saves the camera settings to a file.
         Returns an exception if an error occurs and returns None if successful.
@@ -91,6 +97,9 @@ class PylonCameraWrapper(FrameProviderAbc, SettingPersistentCameraAbc):
         Parameter:
             file_path: the path to the .pfs file to save the camera settings to.
         """
+        if isinstance(file_path, Path):
+            file_path:str = str(file_path)
+
         if not file_path.endswith(".pfs"):
             self.__logger.warning(f"File path does not end with .pfs: {file_path}")
 
@@ -125,6 +134,15 @@ class PylonCameraWrapper(FrameProviderAbc, SettingPersistentCameraAbc):
             return e
         
         self.__logger.info(f"Camera settings loaded from {file_path}")
+
+    @property
+    def pixel_format(self) -> PixelFormatEnum:
+        return self.__pixel_format
+    
+    @pixel_format.setter
+    def pixel_format(self, new_value: PixelFormatEnum):
+        self.__pixel_format = new_value
+        self.__pylon_image_converter.OutputPixelFormat = PylonCameraWrapper.__get_pylon_pixel_format(new_value)
 
     @property
     def camera_name(self) -> str:
@@ -523,3 +541,18 @@ class PylonCameraWrapper(FrameProviderAbc, SettingPersistentCameraAbc):
             
         except Exception as e:
             return e
+    
+    @staticmethod
+    def __get_pylon_pixel_format(pixel_format: PixelFormatEnum):
+
+        assert isinstance(pixel_format, PixelFormatEnum), "Pixel format must be an instance of PixelFormatEnum"
+
+        match pixel_format:
+            case PixelFormatEnum.BGR8:
+                return pylon.PixelType_BGR8packed
+            
+            case PixelFormatEnum.RGB8:
+                return pylon.PixelType_RGB8packed
+            
+            case PixelFormatEnum.Mono8:
+                return pylon.PixelType_Mono8
