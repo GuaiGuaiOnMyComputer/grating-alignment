@@ -25,7 +25,9 @@ class ColoredLoggingFormatter(logging.Formatter):
     
     def __init__(self, *args, **kwargs):
         if not self._initialized:
-            super().__init__(*args, **kwargs)
+            # 設定預設的日誌格式
+            default_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            super().__init__(default_format, *args, **kwargs)
             self._initialized = True
     
     def format(self, record):
