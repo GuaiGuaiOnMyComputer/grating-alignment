@@ -37,25 +37,15 @@ def main():
             # Simulate emergency condition (e.g., sensor trigger, user input, etc.)
             if i == 5:
                 print("EMERGENCY TRIGGERED!")
-                stepper_wrapper.trigger_emergency_stop()
+                stepper_wrapper.emergency_stop()
                 break
         
         print("Operation completed")
         
     except KeyboardInterrupt:
         print("Interrupted by user")
-        stepper_wrapper.trigger_emergency_stop()
+        stepper_wrapper.emergency_stop()
     
-    finally:
-        # Stop the emergency stop thread
-        stepper_wrapper.__stop_emergency_stop_thread()
-        print("Emergency stop thread stopped")
-        
-        # Check if thread is still running
-        if stepper_wrapper.is_emergency_stop_thread_running():
-            print("Warning: Emergency stop thread is still running")
-        else:
-            print("Emergency stop thread stopped successfully")
 
 if __name__ == "__main__":
     main()
