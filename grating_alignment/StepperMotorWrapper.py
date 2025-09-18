@@ -64,7 +64,7 @@ class Tmc220xStepperWrapper:
     
     def start_emergency_stop_thread(self):
         """Start the emergency stop monitoring thread."""
-        self.__stepper.logger.info("Starting emergency stop thread. Call trigger_emergency_stop to trigger the emergency stop.")
+        self.__stepper.tmc_logger.log("Starting emergency stop thread. Call trigger_emergency_stop to trigger the emergency stop.", Loglevel.INFO)
 
         with self.__emergency_stop_lock:
 
@@ -77,7 +77,7 @@ class Tmc220xStepperWrapper:
                 )
                 self.__emergency_stop_thread.start()
     
-    def trigger_emergency_stop(self):
+    def emergency_stop(self):
         """Trigger an emergency stop event."""
         self.__stepper.tmc_logger.log("Emergency stop event triggered.", Loglevel.ERROR)
         self._emergency_stop_event.set()
@@ -494,7 +494,7 @@ class Tmc220xStepperWrapper:
 
     def __stop_emergency_stop_thread(self, due_to_destructor: bool = False):
         """Stop the emergency stop monitoring thread."""
-        self.__stepper.logger.info("Stopping emergency stop thread.", Loglevel.WARNING if due_to_destructor else Loglevel.INFO)
+        self.__stepper.tmc_logger.log("Stopping emergency stop thread.", Loglevel.WARNING if due_to_destructor else Loglevel.INFO)
 
         with self.__emergency_stop_lock:
             if self.__emergency_stop_running:
@@ -516,5 +516,5 @@ class Tmc220xStepperWrapper:
 
             except Exception as e:
                 self.emergency_stop()
-                self.__stepper.logger.log(f"Error in emergency stop thread: {e}. Motor is disabled.", Loglevel.ERROR)
+                self.__stepper.tmc_logger.log(f"Error in emergency stop thread: {e}. Motor is disabled.", Loglevel.ERROR)
                 raise
