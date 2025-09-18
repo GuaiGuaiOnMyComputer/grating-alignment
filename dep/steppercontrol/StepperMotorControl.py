@@ -1,4 +1,6 @@
 from typing import NamedTuple
+from enum import Enum
+from typing import NamedTuple
 
 class StepperDriverPins(NamedTuple):
 
@@ -11,7 +13,18 @@ class StepperDriverPins(NamedTuple):
     reset:int
     enable:int
 
-class A4988StepperMotorContorl:
+class DriverLineEnum(Enum):
+    A4988 = 0
+    DRV8825 = 1
+    TMC2209 = 2
+    Unknown = 999
 
-    def __init__(self):
+class StepperMotorInitParams(NamedTuple):
+
+    enable_pin:int
+    ms1: int
+
+class StepperMotor4Line:
+
+    def __init__(self, init_params):
         pass
