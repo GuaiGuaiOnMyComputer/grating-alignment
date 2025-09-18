@@ -8,6 +8,7 @@ from pypylon.pylon import TimeoutHandling_ThrowException, TimeoutException
 from pypylon.pylon import InstantCamera, GrabResult
 from pypylon.genicam import INodeMap, IEnumeration, IEnumEntry, INode, IFloat, IInteger, IBoolean
 from dep.camerautils.GrabbedImage import GrabbedImage
+from dep.camerautils.CameraEnum import CameraEnum
 from dep.camerautils.FrameProviderAbc import FrameProviderAbc
 from dep.camerautils.SettingPersistentCameraAbc import SettingPersistentCameraAbc
 

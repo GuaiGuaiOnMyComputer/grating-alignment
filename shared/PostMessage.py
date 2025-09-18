@@ -10,5 +10,9 @@ class PostMessage(NamedTuple):
     displacement: float
 
 class PostMessageFactory:
-    def create(self, status_code: StatusCode, message: str, data: BytesIO, displacement: float | None = None) -> PostMessage:
+
+    @staticmethod
+    def create(status_code: StatusCode, message: str, data: BytesIO, displacement: float | None = None) -> PostMessage:
+
+        displacement = displacement if displacement is not None else float("nan")
         return PostMessage(status_code, message, data)
