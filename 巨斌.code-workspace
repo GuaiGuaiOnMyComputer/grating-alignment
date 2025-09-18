@@ -33,6 +33,17 @@
 				"env": {
 					"PYTHONPATH": "${workspaceFolder}"
 				}
+			},
+			{
+				"name": "Debug stepper test",
+				"type": "debugpy",
+				"request": "launch",
+				"program": "${workspaceFolder}/test/test_stepper.py",
+				"console": "integratedTerminal",
+				"justMyCode": false,
+				"env": {
+					"PYTHONPATH": "${workspaceFolder}"
+				}
 			}
 		]
 	}
