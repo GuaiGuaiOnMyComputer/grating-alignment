@@ -14,7 +14,7 @@ class GratingRotationPredictorWithFftResnet18(Module):
         super().__init__()
 
         self.__resnet18_rgb_feature_extractor: ResNet = resnet18(weights = None)
-        self.__resnet18_rgb_feature_extractor.fc = Linear(self.__resnet18_rgb_feature_extractor.fc.in_features, self.__resnet18_rgb_feature_extractor.fc.in_features / 2)
+        self.__resnet18_rgb_feature_extractor.fc = Linear(self.__resnet18_rgb_feature_extractor.fc.in_features, self.__resnet18_rgb_feature_extractor.fc.in_features // 2)
 
         # convert the image into grayscale image and perform fft
         # fft result is converted into a 3-channel tensor
@@ -27,15 +27,19 @@ class GratingRotationPredictorWithFftResnet18(Module):
         ])
 
         self.__resnet18_fft_feature_extractor: ResNet = resnet18(weights = None)
-        self.__resnet18_fft_feature_extractor.fc = Linear(self.__resnet18_fft_feature_extractor.fc.in_features, self.__resnet18_fft_feature_extractor.fc.in_features / 2)
+        self.__resnet18_fft_feature_extractor.fc = Linear(self.__resnet18_fft_feature_extractor.fc.in_features, self.__resnet18_fft_feature_extractor.fc.in_features // 2)
 
-        # after 
-        self.__concat_transform: Compose = Compose([
+        # Concatenation layers
+        from torch.nn import Sequential, ReLU
+        self.__concat_transform = Sequential(
             Linear(self.__resnet18_rgb_feature_extractor.fc.in_features + self.__resnet18_fft_feature_extractor.fc.in_features, 512),
+            ReLU(),
             Linear(512, 256),
+            ReLU(),
             Linear(256, 128),
+            ReLU(),
             Linear(128, 1)
-        ])
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
 
