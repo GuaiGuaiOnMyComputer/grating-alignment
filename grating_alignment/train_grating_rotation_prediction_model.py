@@ -133,7 +133,7 @@ def evaluate_model(model: nn.Module, val_loader: DataLoader, criterion: nn.Modul
     
     return avg_loss, avg_mse, avg_mae
 
-def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, epoch: int, loss: float, filepath: str, args: argparse.Namespace = None):
+def _save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, epoch: int, loss: float, filepath: str, args: argparse.Namespace = None):
     """Save model checkpoint"""
     checkpoint = {
         'epoch': epoch,
@@ -144,7 +144,7 @@ def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, epoch: int, lo
     }
     torch.save(checkpoint, filepath)
 
-def load_checkpoint(filepath: str, model: nn.Module, optimizer: optim.Optimizer = None, device: str = 'cpu'):
+def _load_checkpoint(filepath: str, model: nn.Module, optimizer: optim.Optimizer = None, device: str = 'cpu'):
     """Load model checkpoint"""
     checkpoint = torch.load(filepath, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -152,13 +152,14 @@ def load_checkpoint(filepath: str, model: nn.Module, optimizer: optim.Optimizer 
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     return checkpoint.get('epoch', 0), checkpoint.get('loss', 0.0)
 
-def setup_tensorboard(log_dir: str):
+def _setup_tensorboard(log_dir: str, logger: logging.Logger = None):
     """Setup TensorBoard logging"""
     try:
         from torch.utils.tensorboard import SummaryWriter
         return SummaryWriter(log_dir)
     except ImportError:
-        print("Warning: TensorBoard not available. Install with: pip install tensorboard")
+        if logger:
+            logger.warning("Warning: TensorBoard not available. Install with: pip install tensorboard")
         return None
 
 def setup_logging(logger_name:str, log_dir: str, default_level: int = logging.INFO, log_to_file: bool = False, log_to_console: bool = True) -> logging.Logger:
@@ -207,9 +208,9 @@ def parse_arguments() -> argparse.Namespace:
     
     # Training arguments
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
+    parser.add_argument("--patience", type=int, default=10, help="Patience for early stopping")
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate for optimizer")
     parser.add_argument("--num_epochs", type=int, default=100, help="Number of training epochs")
-    parser.add_argument("--patience", type=int, default=10, help="Patience for early stopping")
     parser.add_argument("--train_ratio", type=float, default=0.8, help="Fraction of data to use for training (rest for validation)")
     
     # Logging and output arguments
@@ -220,13 +221,6 @@ def parse_arguments() -> argparse.Namespace:
     
     # TensorBoard arguments
     parser.add_argument("--tensorboard_dir", type=str, default=None, help="Directory for TensorBoard logs (default: {log_dir}/tensorboard)")
-    
-    # Resume training arguments
-    parser.add_argument("--resume_from", type=str, default=None, help="Path to model checkpoint to resume training from")
-    
-    # Validation arguments
-    parser.add_argument("--val_frequency", type=int, default=1, help="Frequency of validation (every N epochs)")
-    parser.add_argument("--save_frequency", type=int, default=10, help="Frequency of saving model checkpoints (every N epochs)")
     
     return parser.parse_args()
 
@@ -255,8 +249,8 @@ def main():
         log_to_console = True
     )
     
-    main_logger.info(f"Starting training with arguments: {vars(args)}")
-    main_logger.info(f"Using device: {device}")
+    main_logger.info("Starting training with arguments: %s", vars(args))
+    main_logger.info("Using device: %s", device)
     
     # Create directories
     os.makedirs(args.model_save_dir, exist_ok=True)
@@ -273,8 +267,8 @@ def main():
     val_loader: torch.utils.data.DataLoader
     train_loader, val_loader = create_data_loaders(args.root_dir, args.excel_file_path, args.batch_size, args.train_ratio, 4, data_loader_logger)
     
-    data_loader_logger.info(f"Train samples: {len(train_loader.dataset)}")
-    data_loader_logger.info(f"Validation samples: {len(val_loader.dataset)}")
+    data_loader_logger.info("Train samples: %d", len(train_loader.dataset))
+    data_loader_logger.info("Validation samples: %d", len(val_loader.dataset))
     
     # Load model or create new one
     model = GratingRotationPredictorWithFftResnet18()
@@ -285,15 +279,11 @@ def main():
     criterion = nn.MSELoss()
     
     # Setup TensorBoard logging
-    writer = setup_tensorboard(tensorboard_dir)
+    writer = _setup_tensorboard(tensorboard_dir, main_logger)
     
-    # Resume from checkpoint if specified
+    # Hard-coded values
+    patience = 10  # Patience for early stopping
     start_epoch = 1
-    if args.resume_from:
-        main_logger.info(f"Resuming training from: {args.resume_from}")
-        start_epoch, _ = load_checkpoint(args.resume_from, model, optimizer, device)
-        start_epoch += 1
-        main_logger.info(f"Resuming from epoch: {start_epoch}")
     
     # Training variables
     best_val_loss = float('inf')
@@ -310,53 +300,38 @@ def main():
         train_loss = train_epoch(model, train_loader, optimizer, criterion, device)
         train_losses.append(train_loss)
         
-        # Validation
-        if epoch % args.val_frequency == 0:
-            val_loss, val_mse, val_mae = evaluate_model(model, val_loader, criterion, device)
-            val_losses.append(val_loss)
-            
-            # Log results
-            main_logger.info(f"Epoch {epoch}/{args.num_epochs} - "
-                           f"Train Loss: {train_loss:.4f}, "
-                           f"Val Loss: {val_loss:.4f}, "
-                           f"Val MSE: {val_mse:.4f}, "
-                           f"Val MAE: {val_mae:.4f}")
-            
-            # TensorBoard logging
-            if writer:
-                writer.add_scalar('Loss/Train', train_loss, epoch)
-                writer.add_scalar('Loss/Validation', val_loss, epoch)
-                writer.add_scalar('Metrics/MSE', val_mse, epoch)
-                writer.add_scalar('Metrics/MAE', val_mae, epoch)
-            
-            # Save best model
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                patience_counter = 0
-                save_checkpoint(model, optimizer, epoch, val_loss, 
-                              os.path.join(args.model_save_dir, "best_model.pth"), args)
-                main_logger.info(f"New best model saved with validation loss: {val_loss:.4f}")
-            else:
-                patience_counter += 1
-                
-            # Early stopping
-            if patience_counter >= args.patience:
-                main_logger.info(f"Early stopping triggered after {args.patience} epochs without improvement")
-                break
-        else:
-            # Log training only
-            main_logger.info(f"Epoch {epoch}/{args.num_epochs} - Train Loss: {train_loss:.4f}")
-            if writer:
-                writer.add_scalar('Loss/Train', train_loss, epoch)
+        # Validation (every epoch)
+        val_loss, val_mse, val_mae = evaluate_model(model, val_loader, criterion, device)
+        val_losses.append(val_loss)
         
-        # Save checkpoint
-        if epoch % args.save_frequency == 0:
-            save_checkpoint(model, optimizer, epoch, train_loss, 
-                          os.path.join(args.model_save_dir, f"checkpoint_epoch_{epoch}.pth"), args)
-            main_logger.info(f"Saved checkpoint at epoch {epoch}")
-    
+        # Log results
+        main_logger.info("Epoch %d/%d - Train Loss: %.4f, Val Loss: %.4f, Val MSE: %.4f, Val MAE: %.4f",
+                       epoch, args.num_epochs, train_loss, val_loss, val_mse, val_mae)
+        
+        # TensorBoard logging
+        if writer:
+            writer.add_scalar('Loss/Train', train_loss, epoch)
+            writer.add_scalar('Loss/Validation', val_loss, epoch)
+            writer.add_scalar('Metrics/MSE', val_mse, epoch)
+            writer.add_scalar('Metrics/MAE', val_mae, epoch)
+        
+        # Save best model when validation loss improves
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            patience_counter = 0
+            _save_checkpoint(model, optimizer, epoch, val_loss, 
+                          os.path.join(args.model_save_dir, "best_model.pth"), args)
+            main_logger.info("New best model saved with validation loss: %.4f", val_loss)
+        else:
+            patience_counter += 1
+            
+        # Early stopping
+        if patience_counter >= args.patience:
+            main_logger.info("Early stopping triggered after %d epochs without improvement", args.patience)
+            break
+        
     # Save final model
-    save_checkpoint(model, optimizer, epoch, train_loss, os.path.join(args.model_save_dir, "final_model.pth"), args)
+    _save_checkpoint(model, optimizer, epoch, train_loss, os.path.join(args.model_save_dir, "final_model.pth"), args)
     
     # Close TensorBoard writer
     if writer:
@@ -365,10 +340,10 @@ def main():
     # Training summary
     total_time = time.time() - start_time
     main_logger.info("Training completed!")
-    main_logger.info(f"Total training time: {total_time:.2f} seconds")
-    main_logger.info(f"Best validation loss: {best_val_loss:.4f}")
-    main_logger.info(f"Best model saved in: {args.model_save_dir}")
-    main_logger.info(f"TensorBoard logs available in: {tensorboard_dir}")
+    main_logger.info("Total training time: %.2f seconds", total_time)
+    main_logger.info("Best validation loss: %.4f", best_val_loss)
+    main_logger.info("Best model saved in: %s", args.model_save_dir)
+    main_logger.info("TensorBoard logs available in: %s", tensorboard_dir)
 
 if __name__ == "__main__":
     main()
