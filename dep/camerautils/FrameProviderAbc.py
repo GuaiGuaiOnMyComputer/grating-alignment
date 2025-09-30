@@ -1,5 +1,5 @@
-from dep.camerautils.GrabbedImage import GrabbedImage
 from abc import ABC, abstractmethod
+from .GrabbedImage import GrabbedImage
 
 class FrameProviderAbc(ABC):
 

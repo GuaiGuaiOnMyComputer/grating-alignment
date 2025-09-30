@@ -6,6 +6,7 @@ import json
 from typing import Tuple, List
 from logging import Handler, StreamHandler, FileHandler
 from dep.camerautils.Pylon.PylonCameraWrapper import PylonCameraWrapper
+from dep.camerautils.PixelFormatEnum import PixelFormatEnum
 from shared.LoggingFormatter import ColoredLoggingFormatter
 
 def _initialize_logger(logger_name:str, log_to_console:bool = True, log_to_file:bool = False, log_level = logging.INFO) -> Tuple[logging.Logger, List[Handler]]:
@@ -38,7 +39,7 @@ def _acquire_pylon_camera_wrapper(logger:logging.Logger) -> PylonCameraWrapper |
     camera: PylonCameraWrapper | None = None
     try:
         pylon_camera = pypylon.pylon.TlFactory.GetInstance().CreateFirstDevice()
-        camera = PylonCameraWrapper(pylon_camera, logger)
+        camera = PylonCameraWrapper(pylon_camera, PixelFormatEnum.BGR8, logger)
     except pypylon.pylon.RuntimeException as e:
         logger.error(f"Error initializing pylon camera: {e}")
 
