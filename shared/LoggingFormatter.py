@@ -23,11 +23,10 @@ class ColoredLoggingFormatter(logging.Formatter):
             
         return cls._instance
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, format: str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s', *args, **kwargs):
         if not self._initialized:
             # 設定預設的日誌格式
-            default_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            super().__init__(default_format, *args, **kwargs)
+            super().__init__(format, *args, **kwargs)
             self._initialized = True
     
     def format(self, record):

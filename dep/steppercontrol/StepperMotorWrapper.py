@@ -5,7 +5,9 @@ from logging import Formatter, Handler
 from typing import Optional
 from tmc_driver.tmc_220x import Tmc220x, MovementAbsRel, StopMode, MovementAbsRel, DrvStatus, GConf, GStat, Ioin, ChopConf, Loglevel
 from tmc_driver.tmc_2209 import Tmc2209, TmcComUart, TmcEnableControlPin, TmcMotionControlStepDir
+from warnings import deprecated
 
+@deprecated("This class has not been tested and is not recommended for use.")
 class Tmc2209StepperWrapperFactory():
 
     @staticmethod
