@@ -1,0 +1,6 @@
+[submodule "dep/microPython_TMC5160"]
+	path = dep/microPython_TMC5160
+	url = https://github.com/GuaiGuaiOnMyComputer/microPython_TMC5160.git
+[submodule "dep/BIGTREETECH-Stepper-Motor-Driver"]
+	path = dep/BIGTREETECH-Stepper-Motor-Driver
+	url = https://github.com/bigtreetech/BIGTREETECH-Stepper-Motor-Driver.git
