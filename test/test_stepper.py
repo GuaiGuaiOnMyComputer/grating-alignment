@@ -217,6 +217,7 @@ def _test_tmc2209_movement():
     stepper_logger_handler: StreamHandler = StreamHandler()
     stepper_logger_handler.setFormatter(ColoredLoggingFormatter.instance())
     stepper_logger_handler.setLevel(logging.INFO)
+    _find_available_uart_port(main_logger)
     
     try:
         stepper: Tmc220xStepperWrapper = Tmc2209StepperComUartWrapperFactory.create(
