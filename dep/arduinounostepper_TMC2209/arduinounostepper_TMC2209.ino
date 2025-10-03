@@ -40,10 +40,6 @@ void setup() {
     ; // 等待串口連接
   }
   
-  // initialize enable pin
-  pinMode(ENABLE_PIN, OUTPUT);
-  pinMode(DIAG_PIN, INPUT_PULLUP);
-  
   // 初始化TMC2209
   stepper.setup(driverSerial, UNO_BAUDRATE);
   stepper.setHardwareEnablePin(ENABLE_PIN);
@@ -119,7 +115,7 @@ bool executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
           return false;
         }
       } else {
-        strcpy(out_message, "Enable be int.");
+        strcpy(out_message, "Enable is int.");
         return false;
       }
       
@@ -367,19 +363,14 @@ bool executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
         return false;
       }
 
-    case CMD_GET_STALL_GUARD_RESULT:
-      out_value = stepper.getStallGuardResult();
-      strcpy(out_message, "OK");
-      return true;
-      
     case CMD_IS_STANDING_STILL:
-      Status status = stepper.getStatus();
+      TMC2209::Status status = stepper.getStatus();
       out_value = status.standstill ? 1 : 0;
       strcpy(out_message, status.standstill ? "Standing still" : "Moving");
       return true;
       
     default:
-      strcpy(out_message, "Unknown command code");
+      sprintf(out_message, "Unknown command code %d", commandCode);
       return false;
   }
 }

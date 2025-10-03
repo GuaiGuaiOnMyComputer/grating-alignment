@@ -2,7 +2,7 @@ import logging
 import serial
 import json
 from enum import IntEnum
-from typing import Optional, NamedTuple
+from typing import Optional
 from dataclasses import dataclass
 
 
@@ -39,7 +39,7 @@ class StandstillMode(IntEnum):
     BRAKING = 3
 
 
-@dataclass
+@dataclass(slots = True)
 class _DriverBoardCommand:
     """Structured command for driver board communication"""
     command_code: TMC2209Command
@@ -57,7 +57,7 @@ class _DriverBoardCommand:
         return json.dumps(self.to_dict())
 
 
-@dataclass
+@dataclass(slots = True)
 class _DriverBoardResponse:
     """Structured response from driver board"""
     success: bool
@@ -125,9 +125,13 @@ class ArduinoStepper_TMC2209:
             self.__logger.info("Disconnected from Arduino")
         return True
 
-    def enable(self, enable: bool = True) -> _DriverBoardResponse:
+    def disable(self) -> _DriverBoardResponse:
+        """Disable the stepper driver"""
+        return self._send_command_and_receive_response(_DriverBoardCommand(TMC2209Command.ENABLE, 0))
+
+    def enable(self, enable: bool | int = True) -> _DriverBoardResponse:
         """Enable or disable the stepper driver"""
-        return self._send_command_and_receive_response(_DriverBoardCommand(TMC2209Command.ENABLE, bool(enable)))
+        return self._send_command_and_receive_response(_DriverBoardCommand(TMC2209Command.ENABLE, int(enable)))
 
     def set_hardware_enable_pin(self, pin: int) -> _DriverBoardResponse:
         """Set hardware enable pin"""
@@ -235,6 +239,7 @@ class ArduinoStepper_TMC2209:
     def _receive_response(self) -> _DriverBoardResponse:
         """Receive response from Arduino"""
 
+        response_line: str | None = None
         try:
             # Read response
             response_line = self.serial_conn.readline().decode('utf-8').strip()
@@ -242,14 +247,16 @@ class ArduinoStepper_TMC2209:
             if response_line:
                 self.__logger.debug("Received response: %s", response_line)
                 return _DriverBoardResponse.from_json(response_line)
-            else:
-                self.__logger.error("No response received from Arduino")
 
             return _DriverBoardResponse(success=False, message="No response", value=None)
 
-        except serial.SerialException as e:
-            self.__logger.error("Error receiving response: %s", e)
-            return _DriverBoardResponse(success=False, message="Communication error", value=None)
+        except serial.SerialTimeoutException as e:
+            self.__logger.error("Timeout receiving response: %s", e)
+            return _DriverBoardResponse(success=False, message="Timeout", value=None)
+
+        except json.JSONDecodeError as e:
+            self.__logger.error("Error decoding response: %s", e)
+            return _DriverBoardResponse(success = False, message = f"Cannot decode response: {response_line}", value = None)
 
     def _send_command_and_receive_response(self, command: _DriverBoardCommand) -> _DriverBoardResponse:
         """Send command and receive response"""
@@ -258,6 +265,9 @@ class ArduinoStepper_TMC2209:
             return _DriverBoardResponse(success=False, message="Communication error", value=None)
 
         response: _DriverBoardResponse = self._receive_response()
-        if not response.is_successful():
+        if not response.success:
             self.__logger.error("Receive response error after sending command %s: %s", command.command_code, response.message)
+            return response
+
+        self.__logger.debug("Received response after sending command %s: %s", command.command_code, response.message)
         return response
