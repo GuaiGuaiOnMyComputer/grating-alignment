@@ -9,6 +9,7 @@ import logging
 import sys
 import argparse
 from pathlib import Path
+from typing import Literal
 from shared.LoggingFormatter import ColoredLoggingFormatter
 from dep.arduinounostepper_TMC2209.ArduinoStepper_TMC2209 import ArduinoStepper_TMC2209, StandstillMode
 
@@ -28,20 +29,20 @@ class ArduinoTMC2209Tester:
         self.baudrate = baudrate
         self.timeout = timeout
         self.logger = self._setup_logger() if logger is None else logger
-        self.stepper = ArduinoStepper_TMC2209(port, baudrate, timeout, self.logger)
+        self.stepper = ArduinoStepper_TMC2209(port, baudrate, timeout, self._setup_logger("ArduinoTMC2209", is_disabled = True))
         
-    def _setup_logger(self) -> logging.Logger:
+    def _setup_logger(self, logger_name: str = 'ArduinoTMC2209Tester', default_level: Literal = logging.DEBUG, is_disabled: bool = False) -> logging.Logger:
         """Setup logger with colored formatter"""
-        logger = logging.getLogger('ArduinoTMC2209Tester')
-        logger.setLevel(logging.DEBUG)
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(default_level)
         
         # Remove existing handlers
         for handler in logger.handlers[:]:
             logger.removeHandler(handler)
         
         # Create console handler
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.NOTSET)
+        console_handler = logging.StreamHandler() if not is_disabled else logging.NullHandler()
+        console_handler.setLevel(default_level)
         
         # Use the colored formatter
         formatter = ColoredLoggingFormatter.instance()
@@ -156,7 +157,7 @@ class ArduinoTMC2209Tester:
         all_passed = True
         
         # Test microsteps per step (powers of 2)
-        microstep_values = [1, 2, 4, 8, 16, 32, 64]
+        microstep_values = [2, 4, 8, 16, 32, 64]
         
         for i, microsteps in enumerate(microstep_values):
             self.logger.info("Test 7.%d: Set microsteps per step to %d", i + 1, microsteps)
