@@ -29,7 +29,7 @@ class ArduinoTMC2209Tester:
         self.baudrate = baudrate
         self.timeout = timeout
         self.logger = self._setup_logger() if logger is None else logger
-        self.stepper = ArduinoStepper_TMC2209(port, baudrate, timeout, self._setup_logger("ArduinoTMC2209", is_disabled = True))
+        self.stepper = ArduinoStepper_TMC2209(port, baudrate, timeout, self._setup_logger("ArduinoTMC2209", is_disabled = False, default_level = logging.WARNING))
         
     def _setup_logger(self, logger_name: str = 'ArduinoTMC2209Tester', default_level: Literal = logging.DEBUG, is_disabled: bool = False) -> logging.Logger:
         """Setup logger with colored formatter"""
@@ -288,25 +288,28 @@ class ArduinoTMC2209Tester:
         self.logger.info("=== Testing Movement Commands ===")
         
         # Warning and user confirmation
-        self.logger.warning("Motor is about to start moving. Keep clear or press any key to skip this test")
+        self.stepper.enable(True)
+        self.logger.warning("Motor is enabled and about to start moving. Keep clear or press any key to skip this test")
         user_input = input("Enter 'Y' to continue with movement tests, or any other key to skip: ").strip().upper()
         
         if user_input != 'Y':
+            self.stepper.disable()
             self.logger.info("Skipping movement tests as requested by user")
             return True  # Return True since user chose to skip (not a failure)
         
         all_passed = True
+        TEST_SPEED = 100
         
         # Test 16: Move at positive velocity
-        self.logger.info("Test 16: Move at positive velocity (20)")
-        response = self.stepper.move_at_velocity(20)
+        self.logger.info("Test 16: Move at positive velocity (%d)", TEST_SPEED)
+        response = self.stepper.move_at_velocity(TEST_SPEED)
         if response.success:
-            self.logger.info("✓ Motor started moving at velocity 20")
+            self.logger.info("✓ Motor started moving at velocity %d", TEST_SPEED)
         else:
             self.logger.error("✗ Failed to start movement: %s", response.message)
             all_passed = False
         
-        time.sleep(2)  # Let motor run for 2 seconds
+        time.sleep(5)  # Let motor run for 5 seconds
         
         # Test 17: Stop moving
         self.logger.info("Test 17: Stop moving")
@@ -327,10 +330,10 @@ class ArduinoTMC2209Tester:
         time.sleep(1)
         
         # Test 18: Move at negative velocity (reverse direction)
-        self.logger.info("Test 18: Move at negative velocity (-20)")
-        response = self.stepper.move_at_velocity(-20)
+        self.logger.info("Test 18: Move at negative velocity (-%d)", TEST_SPEED)
+        response = self.stepper.move_at_velocity(-TEST_SPEED)
         if response.success:
-            self.logger.info("✓ Motor started moving at velocity -20")
+            self.logger.info("✓ Motor started moving at velocity -%d", TEST_SPEED)
         else:
             self.logger.error("✗ Failed to start reverse movement: %s", response.message)
             all_passed = False
