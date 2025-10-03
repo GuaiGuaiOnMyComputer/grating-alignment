@@ -369,10 +369,11 @@ void sendResponse(const char* message, const bool& success, const int32_t& value
   
   char jsonBuffer[128];  // 相應減少緩衝區大小
   size_t len = serializeJson(response, jsonBuffer, sizeof(jsonBuffer));
-  
-  if (len == 0) {
-    Serial.println("{\"s\":false,\"m\":\"JSON err\",\"v\":0}");  // 縮短錯誤消息
-    return;
+
+  if (response.overflowed())
+  {
+    while(true)
+      Serial.println("Overflowed.");
   }
 
   Serial.println(jsonBuffer);
