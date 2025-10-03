@@ -1,10 +1,10 @@
 #include <TMC2209.h>
 #include <ArduinoJson.h>
+#include "pinconfig.h"
 
 TMC2209 stepper;
 
-// 全局緩衝區用於JSON序列化
-char jsonBuffer[512];
+SoftwareSerial driverSerial(UNO_RX_PIN, UNO_TX_PIN);
 
 // 定義命令代碼枚舉
 enum CommandCode {
@@ -35,8 +35,17 @@ void setup() {
     ; // 等待串口連接
   }
   
+  // initialize enable pin
+  pinMode(ENABLE_PIN, OUTPUT);
+  pinMode(DIAG_PIN, INPUT_PULLUP);
+  
   // 初始化TMC2209
-  stepper.setup(115200);
+  stepper.setup(driverSerial, UNO_BAUDRATE);
+  stepper.setHardwareEnablePin(ENABLE_PIN);
+  stepper.enableAutomaticCurrentScaling();
+  stepper.enableAutomaticGradientAdaptation();
+
+  sendResponse("Ready.", true, 0);
 }
 
 void loop() {
@@ -51,97 +60,108 @@ void loop() {
 }
 
 void processCommand(const char* jsonInput) {
-  StaticJsonDocument<256> doc;  // 減少到256字節，足夠處理簡單的JSON命令
+
+  int32_t commandCode{-1};
+  JsonVariant commandValue;
+  if (!parseCommand(jsonInput, commandCode, commandValue))
+    return; 
+
+  int32_t out_value = -1;
+  char out_message[56] = {0};
+  executeCommand(commandCode, commandValue, out_value, out_message);
+  sendResponse(out_message, true, out_value);
+  memset(out_message, 0, sizeof(out_message));
+}
+
+bool parseCommand(const char* jsonInput, int32_t& out_commandCode, JsonVariant& out_value)
+{
+  StaticJsonDocument<56> doc;
   DeserializationError error = deserializeJson(doc, jsonInput);
   
   if (error) {
-    sendErrorResponse("JSON parse error");
-    return;
+    sendErrorResponse("JSON error");
+    return false;
   }
   
   if (!doc.containsKey("CommandCode")) {
-    sendErrorResponse("Missing CommandCode field");
-    return;
+    sendErrorResponse("Missing CommandCode");
+    return false;
   }
   
-  int commandCode = doc["CommandCode"];
-  JsonVariant value = doc["Value"];
-  
-  int32_t out_value = -1;
-  char out_message[128] = {0};
-  executeCommand(commandCode, value, out_value, out_message);
-  sendResponse(out_message, true, out_value);
-  memset(out_message, 0, sizeof(out_message));
+  out_commandCode = doc["CommandCode"].as<int32_t>();
+  out_value = doc["Value"];
+
+  return true;
 }
 
 void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char* out_message) {
   switch (commandCode) {
     case CMD_ENABLE:
-      if (value.is<int>()) {
-        int enableValue = value.as<int>();
+      if (value.is<int32_t>()) {
+        int32_t enableValue = value.as<int32_t>();
         if (enableValue == 1) {
           stepper.enable();
           out_value = 1;
-          strcpy(out_message, "Driver enabled");
+          strcpy(out_message, "Enabled");
           return;
         } else if (enableValue == 0) {
           stepper.disable();
           out_value = 0;
-          strcpy(out_message, "Driver disabled");
+          strcpy(out_message, "Disabled");
           return;
         } else {
-          strcpy(out_message, "Error: Enable value must be 0 or 1");
+          strcpy(out_message, "Enable must = 0 or 1");
           return;
         }
       } else {
-        strcpy(out_message, "Error: Enable value must be integer");
+        strcpy(out_message, "Enable be int.");
         return;
       }
       
     case CMD_SET_HARDWARE_ENABLE_PIN:
-      if (value.is<int>()) {
-        int pin = value.as<int>();
+      if (value.is<int32_t>()) {
+        int32_t pin = value.as<int32_t>();
         if (pin >= 0 && pin <= 255) {
           stepper.setHardwareEnablePin(pin);
           out_value = pin;
           strcpy(out_message, "Hardware enable pin set");
           return;
         } else {
-          strcpy(out_message, "Error: Pin must be 0-255");
+          strcpy(out_message, "Pin must be 0-255");
           return;
         }
       } else {
-        strcpy(out_message, "Error: Pin must be integer");
+        strcpy(out_message, "Pin must be int.");
         return;
       }
       
     case CMD_HARDWARE_DISABLED:
       out_value = stepper.hardwareDisabled() ? 0 : 1;
-      strcpy(out_message, stepper.hardwareDisabled() ? "Hardware disabled" : "Hardware enabled");
+      strcpy(out_message, stepper.hardwareDisabled() ? "Disabled" : "Enabled");
       return;
       
     case CMD_ENABLE_ANALOG_CURRENT_SCALING:
       stepper.enableAnalogCurrentScaling();
       out_value = 1;
-      strcpy(out_message, "Analog current scaling enabled");
+      strcpy(out_message, "Analog current scaling enb");
       return;
       
     case CMD_DISABLE_AUTOMATIC_CURRENT_SCALING:
       stepper.disableAutomaticCurrentScaling();
       out_value = 0;
-      strcpy(out_message, "Auto current scaling disabled");
+      strcpy(out_message, "Auto current scaling dsb");
       return;
       
     case CMD_ENABLE_AUTOMATIC_CURRENT_SCALING:
       stepper.enableAutomaticCurrentScaling();
       out_value = 1;
-      strcpy(out_message, "Auto current scaling enabled");
+      strcpy(out_message, "Auto current scaling enb");
       return;
       
     case CMD_ENABLE_AUTOMATIC_GRADIENT_ADAPTATION:
       stepper.enableAutomaticGradientAdaptation();
       out_value = 1;
-      strcpy(out_message, "Auto gradient adaptation enabled");
+      strcpy(out_message, "Auto gradient adaptation enb");
       return;
       
     case CMD_SET_PWM_OFFSET:
@@ -153,11 +173,11 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
           strcpy(out_message, "PWM offset set");
           return;
         } else {
-          strcpy(out_message, "Error: PWM offset must be 0-255");
+          strcpy(out_message, "PWM offset must be 0-255");
           return;
         }
       } else {
-        strcpy(out_message, "Error: PWM offset must be integer");
+        strcpy(out_message, "PWM offset must be int");
         return;
       }
       
@@ -170,11 +190,11 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
           strcpy(out_message, "PWM gradient set");
           return;
         } else {
-          strcpy(out_message, "Error: PWM gradient must be 0-255");
+          strcpy(out_message, "PWM gradient must be 0-255");
           return;
         }
       } else {
-        strcpy(out_message, "Error: PWM gradient must be integer");
+        strcpy(out_message, "PWM gradient must be int.");
         return;
       }
       
@@ -187,11 +207,11 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
           strcpy(out_message, "Run current set");
           return;
         } else {
-          strcpy(out_message, "Error: Run current must be 0-100");
+          strcpy(out_message, "Run current in [0, 100]");
           return;
         }
       } else {
-        strcpy(out_message, "Error: Run current must be integer");
+        strcpy(out_message, "Run current must be int.");
         return;
       }
       
@@ -204,11 +224,11 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
           strcpy(out_message, "Hold current set");
           return;
         } else {
-          strcpy(out_message, "Error: Hold current must be 0-100");
+          strcpy(out_message, "Hold current in [0, 100]");
           return;
         }
       } else {
-        strcpy(out_message, "Error: Hold current must be integer");
+        strcpy(out_message, "Hold current must be int");
         return;
       }
       
@@ -219,29 +239,29 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
           case 0:
             stepper.setStandstillMode(TMC2209::NORMAL);
             out_value = 0;
-            strcpy(out_message, "Standstill mode set to NORMAL");
+            strcpy(out_message, "Standstill mode=NORMAL");
             return;
           case 1:
             stepper.setStandstillMode(TMC2209::FREEWHEELING);
             out_value = 1;
-            strcpy(out_message, "Standstill mode set to FREEWHEELING");
+            strcpy(out_message, "Standstill mode=FREEWHEELING");
             return;
           case 2:
             stepper.setStandstillMode(TMC2209::STRONG_BRAKING);
             out_value = 2;
-            strcpy(out_message, "Standstill mode set to STRONG_BRAKING");
+            strcpy(out_message, "Standstill mode=STRONG_BRAKING");
             return;
           case 3:
             stepper.setStandstillMode(TMC2209::BRAKING);
             out_value = 3;
-            strcpy(out_message, "Standstill mode set to BRAKING");
+            strcpy(out_message, "Standstill mode=BRAKING");
             return;
           default:
-            strcpy(out_message, "Error: Invalid standstill mode, use 0-3");
+            strcpy(out_message, "Invalid standstill mode, use 0-3");
             return;
         }
       } else {
-        strcpy(out_message, "Error: Standstill mode must be integer");
+        strcpy(out_message, "Standstill mode must be int.");
         return;
       }
       
@@ -254,11 +274,11 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
           strcpy(out_message, "StallGuard threshold set");
           return;
         } else {
-          strcpy(out_message, "Error: Threshold must be 0-255");
+          strcpy(out_message, "Threshold in [0-255]");
           return;
         }
       } else {
-        strcpy(out_message, "Error: Threshold must be integer");
+        strcpy(out_message, "Threshold must be int.");
         return;
       }
       
@@ -271,11 +291,11 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
           strcpy(out_message, "Microsteps per step set");
           return;
         } else {
-          strcpy(out_message, "Error: Microsteps must be power of 2");
+          strcpy(out_message, "Microsteps must be power of 2");
           return;
         }
       } else {
-        strcpy(out_message, "Error: Microsteps must be integer");
+        strcpy(out_message, "Microsteps must be int.");
         return;
       }
       
@@ -288,11 +308,11 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
           strcpy(out_message, "Microstep exponent set");
           return;
         } else {
-          strcpy(out_message, "Error: Exponent must be 0-6");
+          strcpy(out_message, "Exponent must be 0-6");
           return;
         }
       } else {
-        strcpy(out_message, "Error: Exponent must be integer");
+        strcpy(out_message, "Exponent must be int");
         return;
       }
       
@@ -304,14 +324,14 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
         strcpy(out_message, "Moving at velocity");
         return;
       } else {
-        strcpy(out_message, "Error: Velocity must be integer");
+        strcpy(out_message, "Velocity must be int");
         return;
       }
       
     case CMD_MOVE_USING_STEP_DIR_INTERFACE:
       stepper.moveUsingStepDirInterface();
       out_value = 1;
-      strcpy(out_message, "Switched to step/dir interface mode");
+      strcpy(out_message, "Switched to step/dir mode");
       return;
       
     case CMD_IS_SETUP_AND_COMMUNICATING:
@@ -327,12 +347,12 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
         strcpy(out_message, "Reply delay set");
         return;
       } else {
-        strcpy(out_message, "Error: Delay must be integer");
+        strcpy(out_message, "Delay must be int");
         return;
       }
       
     default:
-      strcpy(out_message, "Error: Unknown command code");
+      strcpy(out_message, "Unknown command code");
       return;
   }
 }
@@ -341,14 +361,25 @@ bool isPowerOfTwo(int n) {
   return n > 0 && (n & (n - 1)) == 0;
 }
 
-void sendResponse(const char* message, bool success, int32_t value) {
-  StaticJsonDocument<512> response;
+void sendResponse(const char* message, const bool& success, const int32_t& value) {
+  StaticJsonDocument<128> response;
   response["success"] = success;
   response["message"] = message;
   response["value"] = value;
+  Serial.print("Capacity");
+  Serial.println(response.capacity());
+  Serial.print("Size");
+  Serial.println(response.size());
   
+  char jsonBuffer[128];
   size_t len = serializeJson(response, jsonBuffer, sizeof(jsonBuffer));
-  Serial.print(jsonBuffer);
+  if (response.overflowed())
+  {
+    Serial.print("Response buffer overflowed. Stop program.");
+    while(true);
+  }
+
+  Serial.println(jsonBuffer);
 }
 
 void sendErrorResponse(const char* errorMessage) {
