@@ -29,7 +29,9 @@ enum CommandCode {
   CMD_MOVE_AT_VELOCITY = 15,
   CMD_MOVE_USING_STEP_DIR_INTERFACE = 16,
   CMD_IS_SETUP_AND_COMMUNICATING = 17,
-  CMD_SET_REPLY_DELAY = 18
+  CMD_SET_REPLY_DELAY = 18,
+  CMD_GET_STALL_GUARD_RESULT = 19,
+  CMD_IS_STANDING_STILL = 20
 };
 
 void setup() {
@@ -47,6 +49,7 @@ void setup() {
   stepper.setHardwareEnablePin(ENABLE_PIN);
   stepper.enableAutomaticCurrentScaling();
   stepper.enableAutomaticGradientAdaptation();
+  stepper.setStandstillMode(TMC2209::NORMAL);
 
   sendResponse("Ready.", true, 0);
 }
@@ -320,15 +323,26 @@ bool executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
       
     case CMD_MOVE_AT_VELOCITY:
       if (value.is<int>()) {
-        int velocity = value.as<int>();
+        
+        const int velocity = value.as<int>();
+
+        if (!stepper.getStatus().standstill && velocity != 0) {
+          strcpy(out_message, "Motor busy.");
+          return false;
+        }
         stepper.moveAtVelocity(velocity);
         out_value = velocity;
-        strcpy(out_message, "Moving at velocity");
+        strcpy(out_message, velocity == 0 ? "Stop" : "Moving at velocity");
         return true;
       } else {
         strcpy(out_message, "Velocity is int");
         return false;
       }
+
+    case CMD_GET_STALL_GUARD_RESULT:
+      out_value = stepper.getStallGuardResult();
+      sprintf(out_message, "SG = %.3E", out_value);
+      return true;
       
     case CMD_MOVE_USING_STEP_DIR_INTERFACE:
       stepper.moveUsingStepDirInterface();
@@ -352,6 +366,17 @@ bool executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
         strcpy(out_message, "Delay is int");
         return false;
       }
+
+    case CMD_GET_STALL_GUARD_RESULT:
+      out_value = stepper.getStallGuardResult();
+      strcpy(out_message, "OK");
+      return true;
+      
+    case CMD_IS_STANDING_STILL:
+      Status status = stepper.getStatus();
+      out_value = status.standstill ? 1 : 0;
+      strcpy(out_message, status.standstill ? "Standing still" : "Moving");
+      return true;
       
     default:
       strcpy(out_message, "Unknown command code");

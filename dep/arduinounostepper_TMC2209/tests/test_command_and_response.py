@@ -245,6 +245,30 @@ class ArduinoTMC2209Tester:
             self.logger.info("✓ PWM gradient set successfully")
         else:
             self.logger.error("✗ Failed to set PWM gradient")
+
+    def test_stall_guard_and_standing_still(self):
+        """Test StallGuard and standing still status commands"""
+        self.logger.info("=== Testing StallGuard and Standing Still Status ===")
+        
+        # Test 14: Get StallGuard result
+        self.logger.info("Test 14: Get StallGuard result")
+        response = self.send_command(19)  # getStallGuardResult
+        if response and response.get('success'):
+            stall_value = response.get('value', 0)
+            self.logger.info("✓ StallGuard result: %s (value: %d)", response.get('message'), stall_value)
+        else:
+            self.logger.error("✗ Failed to get StallGuard result")
+        
+        time.sleep(0.5)
+        
+        # Test 15: Check if motor is standing still
+        self.logger.info("Test 15: Check if motor is standing still")
+        response = self.send_command(20)  # isStandingStill
+        if response and response.get('success'):
+            standing_still = response.get('value', 0)
+            self.logger.info("✓ Standing still status: %s (value: %d)", response.get('message'), standing_still)
+        else:
+            self.logger.error("✗ Failed to check standing still status")
     
     def test_communication(self):
         """Test communication status"""
@@ -294,6 +318,7 @@ class ArduinoTMC2209Tester:
             self.test_standstill_modes()
             self.test_microstepping()
             self.test_pwm_settings()
+            self.test_stall_guard_and_standing_still()
             self.test_communication()
             self.test_error_handling()
             

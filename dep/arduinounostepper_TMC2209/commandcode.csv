@@ -18,3 +18,5 @@ CommandCode	MapToFunction	AvailableValues	Explanation
 16	moveUsingStepDirInterface()	—	Switches library into “step/dir” mode (i.e. the UART control will not provide motion, the external STEP/DIR pins drive motion)
 17	isSetupAndCommunicating()	boolean	Returns whether the TMC2209 responds over UART (i.e. setup succeeded)
 18	setReplyDelay(uint8_t delay)	— (some small integer)	Sets a delay (in microcontroller cycles or some units) before expecting UART reply (for timing)
+19  getStallGuardResult — Returns whether the motor is stalling.
+20  isStandingStill() — Returns whether the motor is standing still
