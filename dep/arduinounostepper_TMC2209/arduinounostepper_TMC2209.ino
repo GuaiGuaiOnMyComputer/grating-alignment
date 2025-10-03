@@ -239,22 +239,22 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
           case 0:
             stepper.setStandstillMode(TMC2209::NORMAL);
             out_value = 0;
-            strcpy(out_message, "Standstill mode=NORMAL");
+            strcpy(out_message, "Mode=NORMAL");
             return;
           case 1:
             stepper.setStandstillMode(TMC2209::FREEWHEELING);
             out_value = 1;
-            strcpy(out_message, "Standstill mode=FREEWHEELING");
+            strcpy(out_message, "Mode=FREEWHEELING");
             return;
           case 2:
             stepper.setStandstillMode(TMC2209::STRONG_BRAKING);
             out_value = 2;
-            strcpy(out_message, "Standstill mode=STRONG_BRAKING");
+            strcpy(out_message, "Mode=STRONG_BRAKING");
             return;
           case 3:
             stepper.setStandstillMode(TMC2209::BRAKING);
             out_value = 3;
-            strcpy(out_message, "Standstill mode=BRAKING");
+            strcpy(out_message, "Mode=BRAKING");
             return;
           default:
             strcpy(out_message, "Invalid standstill mode, use 0-3");
@@ -336,7 +336,7 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
       
     case CMD_IS_SETUP_AND_COMMUNICATING:
       out_value = stepper.isSetupAndCommunicating() ? 1 : 0;
-      strcpy(out_message, stepper.isSetupAndCommunicating() ? "Setup OK, communication OK" : "Setup failed or no communication");
+      strcpy(out_message, stepper.isSetupAndCommunicating() ? "Setup OK" : "Setup failed");
       return;
       
     case CMD_SET_REPLY_DELAY:
@@ -362,21 +362,17 @@ bool isPowerOfTwo(int n) {
 }
 
 void sendResponse(const char* message, const bool& success, const int32_t& value) {
-  StaticJsonDocument<128> response;
+  StaticJsonDocument<128> response;  // 減少到128字節以節省記憶體
   response["success"] = success;
   response["message"] = message;
   response["value"] = value;
-  Serial.print("Capacity");
-  Serial.println(response.capacity());
-  Serial.print("Size");
-  Serial.println(response.size());
   
-  char jsonBuffer[128];
+  char jsonBuffer[128];  // 相應減少緩衝區大小
   size_t len = serializeJson(response, jsonBuffer, sizeof(jsonBuffer));
-  if (response.overflowed())
-  {
-    Serial.print("Response buffer overflowed. Stop program.");
-    while(true);
+  
+  if (len == 0) {
+    Serial.println("{\"s\":false,\"m\":\"JSON err\",\"v\":0}");  // 縮短錯誤消息
+    return;
   }
 
   Serial.println(jsonBuffer);
