@@ -61,6 +61,7 @@ class ArduinoTMC2209Tester:
             )
             time.sleep(2)  # Wait for Arduino to initialize
             self.logger.info("Connected to Arduino on %s at %d baud", self.port, self.baudrate)
+            self.logger.info("Arduino response: %s", self.serial_conn.readline().decode('utf-8').strip())
             return True
         except serial.SerialException as e:
             self.logger.error("Failed to connect to Arduino: %s", e)
