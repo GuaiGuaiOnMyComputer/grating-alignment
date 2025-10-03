@@ -4,39 +4,47 @@ from typing import List
 from logging import Formatter, Handler
 from typing import Optional
 from tmc_driver.tmc_220x import Tmc220x, MovementAbsRel, StopMode, MovementAbsRel, DrvStatus, GConf, GStat, Ioin, ChopConf, Loglevel
-from tmc_driver.tmc_2209 import Tmc2209, TmcComUart, TmcEnableControlPin, TmcMotionControlStepDir
-from warnings import deprecated
+from tmc_driver.tmc_2209 import Tmc2209, TmcComUart, TmcEnableControlPin, TmcMotionControlStepDir, TmcMotionControlVActual
 
-@deprecated("This class has not been tested and is not recommended for use.")
-class Tmc2209StepperWrapperFactory():
+class Tmc2209StepperComUartWrapperFactory():
 
     @staticmethod
     def create(
             enable_pin: int, 
-            step_signal_pin: int, 
-            step_direction_pin: int, 
-            com_uart:str | None = None, 
+            com_uart: str, 
+            baud_rate: int = 115200,
             log_prefix = "TMC2209-Stepper", 
             log_formatter: Formatter | None = None, 
-            log_handler: List[Handler] | None = None
+            log_handler: List[Handler] | None = None,
+            step_resolution:int = 2,
+            max_step_per_second:int = 1000,
+            full_step_per_rev:int = 200
         ):
-        """Create a Tmc220xStepperWrapper.
+        """Create a Tmc220xStepperWrapper with UART communication.
         
         Args:
             enable_pin (int): The pin number for the enable signal.
-            step_signal_pin (int): The pin number for the step signal.
-            step_direction_pin (int): The pin number for the direction signal.
-            com_uart (str | None): The UART port to use for communication.
+            com_uart (str): The UART port to use for communication (required for UART mode).
+            baud_rate (int): The baud rate to use for communication.
             log_prefix (str): The prefix for the logger.
             log_formatter (Formatter | None): The formatter for the logger.
             log_handler (List[Handler] | None): The handlers for the logger.
+            step_resolution (int): The step resolution.
+            max_step_per_second (int): The maximum step per second.
+            full_step_per_rev (int): The full step per revolution.
         """
 
-        enable_control_poin:TmcMotionControlStepDir = TmcEnableControlPin(enable_pin)
-        motion_control_step_dir: TmcMotionControlStepDir = TmcMotionControlStepDir(step_signal_pin, step_direction_pin)
-        motor_com_uart: TmcComUart | None = TmcComUart(com_uart) if com_uart is not None else None
+        enable_control_pin: TmcEnableControlPin = TmcEnableControlPin(enable_pin)
+        motion_control_vactual: TmcMotionControlVActual = TmcMotionControlVActual()
+        motor_com_uart: TmcComUart = TmcComUart(com_uart, baud_rate)
 
-        tmc_stepper: Tmc2209 = Tmc2209(enable_control_poin, motion_control_step_dir, motor_com_uart, logprefix = log_prefix, log_formatter = log_formatter, log_handlers = log_handler)
+        # Set up motion control properties for UART mode
+        motion_control_vactual.tmc_com = motor_com_uart
+        motion_control_vactual.fullsteps_per_rev = full_step_per_rev  # Standard stepper motor
+        motion_control_vactual.mres = step_resolution  # 1/16 microstepping
+        motion_control_vactual.max_speed = max_step_per_second  # steps per second
+
+        tmc_stepper: Tmc2209 = Tmc2209(enable_control_pin, motion_control_vactual, motor_com_uart, logprefix = log_prefix, log_formatter = log_formatter, log_handlers = log_handler)
         return Tmc220xStepperWrapper(tmc_stepper)
 
 
