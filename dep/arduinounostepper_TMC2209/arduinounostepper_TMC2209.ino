@@ -3,6 +3,7 @@
 #include "pinconfig.h"
 
 TMC2209 stepper;
+bool motorMoving = false;
 
 #define INPUT_BUFFER_SIZE 56
 #define OUTPUT_BUFFER_SIZE 192
@@ -318,26 +319,33 @@ bool executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
       }
       
     case CMD_MOVE_AT_VELOCITY:
-      if (value.is<int>()) {
-        
-        const int velocity = value.as<int>();
-
-        if (!stepper.getStatus().standstill && velocity != 0) {
-          strcpy(out_message, "Motor busy.");
-          return false;
-        }
-        stepper.moveAtVelocity(velocity);
-        out_value = velocity;
-        strcpy(out_message, velocity == 0 ? "Stop" : "Moving at velocity");
-        return true;
-      } else {
+      if (!value.is<int>()) {
         strcpy(out_message, "Velocity is int");
         return false;
       }
+        
+      const int velocity = value.as<int>();
+
+      if (motorMoving && velocity != 0) {
+        strcpy(out_message, "Motor busy.");
+        return false;
+      }
+
+      if (velocity == 0) {
+        strcpy(out_message, "Motor stop.");
+        motorMoving = false;
+        return true;
+      }
+
+      motorMoving = true;
+      stepper.moveAtVelocity(velocity);
+      out_value = velocity;
+      sprintf(out_message, "Move at v=%E", velocity);
+      return true;
 
     case CMD_GET_STALL_GUARD_RESULT:
       out_value = stepper.getStallGuardResult();
-      sprintf(out_message, "SG = %.3E", out_value);
+      sprintf(out_message, "SG = %E", out_value);
       return true;
       
     case CMD_MOVE_USING_STEP_DIR_INTERFACE:
