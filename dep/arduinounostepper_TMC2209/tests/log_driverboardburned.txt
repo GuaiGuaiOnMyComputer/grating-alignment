@@ -1,0 +1,63 @@
+.env) ptri06@ptri06:~/grating-alignment$ python dep/arduinounostepper_TMC2209/tests/test_command_and_response.py  --port /dev/ttyACM0
+2025-10-03 16:00:04,762 - ArduinoTMC2209Tester - INFO - Starting Arduino TMC2209 Test Suite
+2025-10-03 16:00:04,763 - ArduinoTMC2209Tester - INFO - ==================================================
+2025-10-03 16:00:06,460 - ArduinoTMC2209Tester - INFO - === Testing Basic Commands ===
+2025-10-03 16:00:06,461 - ArduinoTMC2209Tester - INFO - Test 1: Enable driver
+2025-10-03 16:00:06,473 - ArduinoTMC2209Tester - INFO - ✓ Driver enabled successfully
+2025-10-03 16:00:06,973 - ArduinoTMC2209Tester - INFO - Test 2: Disable driver
+2025-10-03 16:00:06,985 - ArduinoTMC2209Tester - INFO - ✓ Driver disabled successfully
+2025-10-03 16:00:07,486 - ArduinoTMC2209Tester - INFO - Test 3: Check hardware disabled status
+2025-10-03 16:00:07,623 - ArduinoTMC2209Tester - INFO - ✓ Hardware status: ENB
+2025-10-03 16:00:07,624 - ArduinoTMC2209Tester - INFO - === Testing Current Settings ===
+2025-10-03 16:00:07,624 - ArduinoTMC2209Tester - INFO - Test 4: Set run current to 50%
+2025-10-03 16:00:07,636 - ArduinoTMC2209Tester - INFO - ✓ Run current set successfully
+2025-10-03 16:00:08,136 - ArduinoTMC2209Tester - INFO - Test 5: Set hold current to 25%
+2025-10-03 16:00:08,148 - ArduinoTMC2209Tester - INFO - ✓ Hold current set successfully
+2025-10-03 16:00:08,149 - ArduinoTMC2209Tester - INFO - === Testing Standstill Modes ===
+2025-10-03 16:00:08,149 - ArduinoTMC2209Tester - INFO - Test 6.1: Set standstill mode to NORMAL
+2025-10-03 16:00:08,160 - ArduinoTMC2209Tester - INFO - ✓ Standstill mode set to NORMAL
+2025-10-03 16:00:08,661 - ArduinoTMC2209Tester - INFO - Test 6.2: Set standstill mode to FREEWHEELING
+2025-10-03 16:00:08,673 - ArduinoTMC2209Tester - INFO - ✓ Standstill mode set to FREEWHEELING
+2025-10-03 16:00:09,173 - ArduinoTMC2209Tester - INFO - Test 6.3: Set standstill mode to STRONG_BRAKING
+2025-10-03 16:00:09,184 - ArduinoTMC2209Tester - INFO - ✓ Standstill mode set to STRONG_BRAKING
+2025-10-03 16:00:09,685 - ArduinoTMC2209Tester - INFO - Test 6.4: Set standstill mode to BRAKING
+2025-10-03 16:00:09,696 - ArduinoTMC2209Tester - INFO - ✓ Standstill mode set to BRAKING
+2025-10-03 16:00:10,197 - ArduinoTMC2209Tester - INFO - === Testing Microstepping ===
+2025-10-03 16:00:10,197 - ArduinoTMC2209Tester - INFO - Test 7.1: Set microsteps per step to 2
+2025-10-03 16:00:10,208 - ArduinoTMC2209Tester - INFO - ✓ Microsteps per step set to 2
+2025-10-03 16:00:10,709 - ArduinoTMC2209Tester - INFO - Test 7.2: Set microsteps per step to 4
+2025-10-03 16:00:10,720 - ArduinoTMC2209Tester - INFO - ✓ Microsteps per step set to 4
+2025-10-03 16:00:11,220 - ArduinoTMC2209Tester - INFO - Test 7.3: Set microsteps per step to 8
+2025-10-03 16:00:11,231 - ArduinoTMC2209Tester - INFO - ✓ Microsteps per step set to 8
+2025-10-03 16:00:11,732 - ArduinoTMC2209Tester - INFO - Test 7.4: Set microsteps per step to 16
+2025-10-03 16:00:11,744 - ArduinoTMC2209Tester - INFO - ✓ Microsteps per step set to 16
+2025-10-03 16:00:12,244 - ArduinoTMC2209Tester - INFO - Test 7.5: Set microsteps per step to 32
+2025-10-03 16:00:12,256 - ArduinoTMC2209Tester - INFO - ✓ Microsteps per step set to 32
+2025-10-03 16:00:12,757 - ArduinoTMC2209Tester - INFO - Test 7.6: Set microsteps per step to 64
+2025-10-03 16:00:12,771 - ArduinoTMC2209Tester - INFO - ✓ Microsteps per step set to 64
+2025-10-03 16:00:13,271 - ArduinoTMC2209Tester - INFO - Test 8: Set microstep exponent to 3 (2^3 = 8)
+2025-10-03 16:00:13,283 - ArduinoTMC2209Tester - INFO - ✓ Microstep exponent set successfully
+2025-10-03 16:00:13,283 - ArduinoTMC2209Tester - INFO - === Testing PWM Settings ===
+2025-10-03 16:00:13,284 - ArduinoTMC2209Tester - INFO - Test 9: Set PWM offset to 128
+2025-10-03 16:00:13,296 - ArduinoTMC2209Tester - INFO - ✓ PWM offset set successfully
+2025-10-03 16:00:13,796 - ArduinoTMC2209Tester - INFO - Test 10: Set PWM gradient to 64
+2025-10-03 16:00:13,808 - ArduinoTMC2209Tester - INFO - ✓ PWM gradient set successfully
+2025-10-03 16:00:13,808 - ArduinoTMC2209Tester - INFO - === Testing StallGuard and Standing Still Status ===
+2025-10-03 16:00:13,808 - ArduinoTMC2209Tester - INFO - Test 14: Get StallGuard result
+2025-10-03 16:00:13,819 - ArduinoTMC2209Tester - INFO - ✓ StallGuard result:  (value: -1)
+2025-10-03 16:00:14,320 - ArduinoTMC2209Tester - INFO - Test 15: Check if motor is standing still
+2025-10-03 16:00:14,328 - ArduinoTMC2209Tester - INFO - ✓ Standing still status:  (value: -1)
+2025-10-03 16:00:14,328 - ArduinoTMC2209Tester - INFO - === Testing Communication ===
+2025-10-03 16:00:14,328 - ArduinoTMC2209Tester - INFO - Test 11: Check communication status
+2025-10-03 16:00:14,336 - ArduinoTMC2209Tester - INFO - ✓ Communication status: 
+2025-10-03 16:00:14,336 - ArduinoTMC2209Tester - INFO - === Testing Error Handling ===
+2025-10-03 16:00:14,336 - ArduinoTMC2209Tester - INFO - Test 12: Test invalid current percentage (should fail)
+2025-10-03 16:00:14,348 - ArduinoTMC2209 - ERROR - Receive response error after sending command TMC2209Command.SET_RUN_CURRENT: Run CRT in [0, 100]
+2025-10-03 16:00:14,348 - ArduinoTMC2209Tester - INFO - ✓ Error handling works correctly: Run CRT in [0, 100]
+2025-10-03 16:00:14,849 - ArduinoTMC2209Tester - INFO - Test 13: Test invalid microstep value (should fail)
+2025-10-03 16:00:14,863 - ArduinoTMC2209 - ERROR - Receive response error after sending command TMC2209Command.SET_MICROSTEPS_PER_STEP: Microsteps must be power of 2
+2025-10-03 16:00:14,864 - ArduinoTMC2209Tester - INFO - ✓ Invalid microstep handling works correctly: Microsteps must be power of 2
+2025-10-03 16:00:14,864 - ArduinoTMC2209Tester - INFO - All basic tests passed. Proceeding with movement tests...
+2025-10-03 16:00:14,864 - ArduinoTMC2209Tester - INFO - === Testing Movement Commands ===
+2025-10-03 16:00:14,876 - ArduinoTMC2209Tester - WARNING - Motor is enabled and about to start moving. Keep clear or press any key to skip this test
+Enter 'Y' to continue with movement tests, or any other key to skip:        

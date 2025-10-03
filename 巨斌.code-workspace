@@ -38,12 +38,18 @@
 				"name": "Debug stepper test",
 				"type": "debugpy",
 				"request": "launch",
-				"program": "${workspaceFolder}/test/test_stepper.py",
+				"program": "${workspaceFolder}/dep/arduinounostepper_TMC2209/tests/test_command_and_response.py",
 				"console": "integratedTerminal",
 				"justMyCode": false,
 				"env": {
 					"PYTHONPATH": "${workspaceFolder}"
-				}
+				},
+				"args": [
+					"--port",
+					"COM3",
+					"--skip_movement_tests",
+					"no"
+				]
 			}
 		]
 	}
