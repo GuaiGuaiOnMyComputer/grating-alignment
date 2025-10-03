@@ -1,0 +1,20 @@
+CommandCode	MapToFunction	AvailableValues	Explanation
+0	enable() / disable()	— (no parameters)	Enables or disables the driver in software (power stage on/off).
+1	setHardwareEnablePin(pin)	pin number (e.g. 0–255)	Assigns a microcontroller pin to control the driver’s hardware ENABLE line.
+2	hardwareDisabled()	boolean	Returns whether the hardware enable pin currently disables the driver.
+3	enableAnalogCurrentScaling()	—	Allows the driver’s current limit to be controlled by external VREF (potentiometer) instead of via UART.
+4	disableAutomaticCurrentScaling()	—	Switches off automatic current scaling (i.e. disables “smart” current regulation).
+5	enableAutomaticCurrentScaling()	—	Enables current control mode (automatic tuning) where the driver measures coil current and adjusts voltage accordingly.
+6	enableAutomaticGradientAdaptation()	—	When in current control mode, allows the driver to automatically adjust PWM gradient parameter.
+7	setPwmOffset(uint8_t pwm_amplitude)	0 … 255	Sets the PWM offset parameter (affects coil current especially at standstill)
+8	setPwmGradient(uint8_t pwm_amplitude)	0 … 255	Sets the PWM gradient parameter (affects how current scales with speed)
+9	setRunCurrent(uint8_t percent)	0 … 100	Sets the percentage of maximum current to use during movement (run current)
+10	setHoldCurrent(uint8_t percent)	0 … 100	Sets the percentage of maximum current to use when holding still (hold current)
+11	setStandstillMode(mode)	NORMAL, FREEWHEELING, STRONG_BRAKING, BRAKING	Selects how the driver treats the coils at zero velocity (actively hold, free spin, or short coils)
+12	setStallGuardThreshold(uint8_t threshold)	0 … 255 (or implementation-limited subset)	Sets the StallGuard sensitivity threshold (for detecting motor load / stalling)
+13	setMicrostepsPerStep(uint32_t microsteps)	powers of 2 (e.g. 1, 2, 4, 8, 16, 32, 64)	Sets the microstepping factor (i.e. how many microsteps per full step)
+14	setMicrostepsPerStepPowerOfTwo(uint8_t exponent)	0 … N (e.g. exponent = 0 means 1 microstep per full step, exponent = 6 means 64 microsteps)	Alternative method: specify the exponent of two to choose microstepping
+15	moveAtVelocity(int32_t microsteps_per_period)	signed integer (32-bit)	Sends a “velocity command” to run the motor: positive or negative (direction implicitly)
+16	moveUsingStepDirInterface()	—	Switches library into “step/dir” mode (i.e. the UART control will not provide motion, the external STEP/DIR pins drive motion)
+17	isSetupAndCommunicating()	boolean	Returns whether the TMC2209 responds over UART (i.e. setup succeeded)
+18	setReplyDelay(uint8_t delay)	— (some small integer)	Sets a delay (in microcontroller cycles or some units) before expecting UART reply (for timing)
