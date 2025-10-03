@@ -102,12 +102,12 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
         if (enableValue == 1) {
           stepper.enable();
           out_value = 1;
-          strcpy(out_message, "Enabled");
+          strcpy(out_message, "ENB");
           return;
         } else if (enableValue == 0) {
           stepper.disable();
           out_value = 0;
-          strcpy(out_message, "Disabled");
+          strcpy(out_message, "DSB");
           return;
         } else {
           strcpy(out_message, "Enable must = 0 or 1");
@@ -124,44 +124,44 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
         if (pin >= 0 && pin <= 255) {
           stepper.setHardwareEnablePin(pin);
           out_value = pin;
-          strcpy(out_message, "Hardware enable pin set");
+          strcpy(out_message, "OK");
           return;
         } else {
           strcpy(out_message, "Pin must be 0-255");
           return;
         }
       } else {
-        strcpy(out_message, "Pin must be int.");
+        strcpy(out_message, "Pin is int.");
         return;
       }
       
     case CMD_HARDWARE_DISABLED:
       out_value = stepper.hardwareDisabled() ? 0 : 1;
-      strcpy(out_message, stepper.hardwareDisabled() ? "Disabled" : "Enabled");
+      strcpy(out_message, stepper.hardwareDisabled() ? "DSB" : "ENB");
       return;
       
     case CMD_ENABLE_ANALOG_CURRENT_SCALING:
       stepper.enableAnalogCurrentScaling();
       out_value = 1;
-      strcpy(out_message, "Analog current scaling enb");
+      strcpy(out_message, "Analog CRT SCL ENB");
       return;
       
     case CMD_DISABLE_AUTOMATIC_CURRENT_SCALING:
       stepper.disableAutomaticCurrentScaling();
       out_value = 0;
-      strcpy(out_message, "Auto current scaling dsb");
+      strcpy(out_message, "Auto CRT SCL DSB");
       return;
       
     case CMD_ENABLE_AUTOMATIC_CURRENT_SCALING:
       stepper.enableAutomaticCurrentScaling();
       out_value = 1;
-      strcpy(out_message, "Auto current scaling enb");
+      strcpy(out_message, "Auto CRT SCL ENB");
       return;
       
     case CMD_ENABLE_AUTOMATIC_GRADIENT_ADAPTATION:
       stepper.enableAutomaticGradientAdaptation();
       out_value = 1;
-      strcpy(out_message, "Auto gradient adaptation enb");
+      strcpy(out_message, "Auto GRAD ADA ENB");
       return;
       
     case CMD_SET_PWM_OFFSET:
@@ -170,14 +170,14 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
         if (pwmOffset >= 0 && pwmOffset <= 255) {
           stepper.setPwmOffset(pwmOffset);
           out_value = pwmOffset;
-          strcpy(out_message, "PWM offset set");
+          strcpy(out_message, "OK");
           return;
         } else {
-          strcpy(out_message, "PWM offset must be 0-255");
+          strcpy(out_message, "PWM offset in [0-255]");
           return;
         }
       } else {
-        strcpy(out_message, "PWM offset must be int");
+        strcpy(out_message, "PWM offset is int");
         return;
       }
       
@@ -187,14 +187,14 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
         if (pwmGradient >= 0 && pwmGradient <= 255) {
           stepper.setPwmGradient(pwmGradient);
           out_value = pwmGradient;
-          strcpy(out_message, "PWM gradient set");
+          strcpy(out_message, "OK");
           return;
         } else {
-          strcpy(out_message, "PWM gradient must be 0-255");
+          strcpy(out_message, "PWM gradient in [0-255]");
           return;
         }
       } else {
-        strcpy(out_message, "PWM gradient must be int.");
+        strcpy(out_message, "PWM gradient is int.");
         return;
       }
       
@@ -204,14 +204,14 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
         if (runCurrent >= 0 && runCurrent <= 100) {
           stepper.setRunCurrent(runCurrent);
           out_value = runCurrent;
-          strcpy(out_message, "Run current set");
+          strcpy(out_message, "OK");
           return;
         } else {
-          strcpy(out_message, "Run current in [0, 100]");
+          strcpy(out_message, "Run CRT in [0, 100]");
           return;
         }
       } else {
-        strcpy(out_message, "Run current must be int.");
+        strcpy(out_message, "Run CRT is int.");
         return;
       }
       
@@ -221,14 +221,14 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
         if (holdCurrent >= 0 && holdCurrent <= 100) {
           stepper.setHoldCurrent(holdCurrent);
           out_value = holdCurrent;
-          strcpy(out_message, "Hold current set");
+          strcpy(out_message, "OK");
           return;
         } else {
-          strcpy(out_message, "Hold current in [0, 100]");
+          strcpy(out_message, "Hold CRT in [0, 100]");
           return;
         }
       } else {
-        strcpy(out_message, "Hold current must be int");
+        strcpy(out_message, "Hold CRT is int");
         return;
       }
       
@@ -239,29 +239,29 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
           case 0:
             stepper.setStandstillMode(TMC2209::NORMAL);
             out_value = 0;
-            strcpy(out_message, "Mode=NORMAL");
+            strcpy(out_message, "OK");
             return;
           case 1:
             stepper.setStandstillMode(TMC2209::FREEWHEELING);
             out_value = 1;
-            strcpy(out_message, "Mode=FREEWHEELING");
+            strcpy(out_message, "OK");
             return;
           case 2:
             stepper.setStandstillMode(TMC2209::STRONG_BRAKING);
             out_value = 2;
-            strcpy(out_message, "Mode=STRONG_BRAKING");
+            strcpy(out_message, "OK");
             return;
           case 3:
             stepper.setStandstillMode(TMC2209::BRAKING);
             out_value = 3;
-            strcpy(out_message, "Mode=BRAKING");
+            strcpy(out_message, "OK");
             return;
           default:
-            strcpy(out_message, "Invalid standstill mode, use 0-3");
+            strcpy(out_message, "Standstill mode in [0-3]");
             return;
         }
       } else {
-        strcpy(out_message, "Standstill mode must be int.");
+        strcpy(out_message, "Standstill mode is int.");
         return;
       }
       
@@ -278,7 +278,7 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
           return;
         }
       } else {
-        strcpy(out_message, "Threshold must be int.");
+        strcpy(out_message, "Threshold is int.");
         return;
       }
       
@@ -288,14 +288,14 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
         if (isPowerOfTwo(microsteps)) {
           stepper.setMicrostepsPerStep(microsteps);
           out_value = microsteps;
-          strcpy(out_message, "Microsteps per step set");
+          strcpy(out_message, "Ok");
           return;
         } else {
           strcpy(out_message, "Microsteps must be power of 2");
           return;
         }
       } else {
-        strcpy(out_message, "Microsteps must be int.");
+        strcpy(out_message, "Microsteps is int.");
         return;
       }
       
@@ -305,14 +305,14 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
         if (exponent >= 0 && exponent <= 6) {
           stepper.setMicrostepsPerStepPowerOfTwo(exponent);
           out_value = exponent;
-          strcpy(out_message, "Microstep exponent set");
+          strcpy(out_message, "Ok");
           return;
         } else {
           strcpy(out_message, "Exponent must be 0-6");
           return;
         }
       } else {
-        strcpy(out_message, "Exponent must be int");
+        strcpy(out_message, "Exponent is int");
         return;
       }
       
@@ -324,14 +324,14 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
         strcpy(out_message, "Moving at velocity");
         return;
       } else {
-        strcpy(out_message, "Velocity must be int");
+        strcpy(out_message, "Velocity is int");
         return;
       }
       
     case CMD_MOVE_USING_STEP_DIR_INTERFACE:
       stepper.moveUsingStepDirInterface();
       out_value = 1;
-      strcpy(out_message, "Switched to step/dir mode");
+      strcpy(out_message, "OK");
       return;
       
     case CMD_IS_SETUP_AND_COMMUNICATING:
@@ -344,10 +344,10 @@ void executeCommand(int commandCode, JsonVariant value, int32_t& out_value, char
         int delay = value.as<int>();
         stepper.setReplyDelay(delay);
         out_value = delay;
-        strcpy(out_message, "Reply delay set");
+        strcpy(out_message, "OK");
         return;
       } else {
-        strcpy(out_message, "Delay must be int");
+        strcpy(out_message, "Delay is int");
         return;
       }
       
@@ -362,12 +362,12 @@ bool isPowerOfTwo(int n) {
 }
 
 void sendResponse(const char* message, const bool& success, const int32_t& value) {
-  StaticJsonDocument<128> response;  // 減少到128字節以節省記憶體
+  StaticJsonDocument<192> response;  // 減少到128字節以節省記憶體
   response["success"] = success;
   response["message"] = message;
   response["value"] = value;
   
-  char jsonBuffer[128];  // 相應減少緩衝區大小
+  char jsonBuffer[192];  // 相應減少緩衝區大小
   size_t len = serializeJson(response, jsonBuffer, sizeof(jsonBuffer));
 
   if (response.overflowed())
