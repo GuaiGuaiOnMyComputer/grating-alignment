@@ -50,6 +50,31 @@
 					"--skip_movement_tests",
 					"no"
 				]
+			},
+			{
+				"name": "Debug train grating rotation prediction model",
+				"type": "debugpy",
+				"request": "launch",
+				"program": "${workspaceFolder}/grating_alignment/train_grating_rotation_prediction_model.py",
+				"console": "integratedTerminal",
+				"justMyCode": false,
+				"env": {
+					"PYTHONPATH": "${workspaceFolder}"
+				},
+				"args": [
+					"--batch_size",
+					"4",
+					"--learning_rate",
+					"5e-5",
+					"--num_epochs",
+					"80",
+					"--excel_file_path",
+					"${workspaceFolder}/grating_alignment/rotated-grating-images-topview/images-and-grating-rotation.ods",
+					"--root_dir",
+					"${workspaceFolder}/grating_alignment/rotated-grating-images-topview/",
+					"--image_extension",
+					"png"
+				]
 			}
 		]
 	}

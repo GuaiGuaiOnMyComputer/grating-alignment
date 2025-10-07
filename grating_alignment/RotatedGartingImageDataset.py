@@ -59,6 +59,14 @@ class RotatedGartingImageDataset(Dataset):
     def root_dir(self) -> Path:
         return self.__root_dir
 
+    @property
+    def transform(self) -> Compose | None:
+        return self.__transform
+    
+    @transform.setter
+    def transform(self, transform: Compose | None):
+        self.__transform = transform
+
     @staticmethod
     def __load_excel_file(excel_file_path: Path, logger: logging.Logger | None = None) -> List[GratingPostureInfo]:
         """
@@ -76,11 +84,11 @@ class RotatedGartingImageDataset(Dataset):
         
         for _, row in df.iterrows():
             grating_info = GratingPostureInfo(
-                image_id = str(row["image_id"]),
-                gratering_side_x_cm = float(row["gratering_side_x_cm"]),
-                gratering_side_y_cm = float(row["gratering_side_y_cm"]),
-                gratering_side_angle_deg = float(row["gratering_side_angle_deg"]),
-                grating_side_rotation_deg = float(row["grating_side_rotation_deg"])
+                image_id = torch.as_tensor(row["image_id"], dtype = torch.int32),
+                gratering_side_x_cm = torch.as_tensor(row["gratering_side_x_cm"], dtype = torch.float32),
+                gratering_side_y_cm = torch.as_tensor(row["gratering_side_y_cm"], dtype = torch.float32),
+                gratering_side_angle_deg = torch.as_tensor(row["gratering_side_angle_deg"], dtype = torch.float32),
+                grating_side_rotation_deg = torch.as_tensor(row["grating_side_rotation_deg"], dtype = torch.float32)
             )
 
             logger.debug(f"Loaded grating posture info: {grating_info}")

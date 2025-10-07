@@ -341,8 +341,8 @@ bool executeCommand(int32_t commandCode, JsonVariant value, int32_t& out_value, 
 
       if (velocity == 0) {
         motorMoving = false;
-        // 停止時重置為安全電流設定
-        resetToSafeCurrentSettings();
+        stepper.moveAtVelocity(velocity);
+        out_value = velocity;
         strcpy(out_message, "Motor stop.");
         return true;
       }
@@ -447,8 +447,8 @@ void sendErrorResponse(const char* errorMessage) {
 
 void resetToSafeCurrentSettings() {
   // 將電流設定重置為安全值，防止馬達過熱
-  stepper.setRunCurrent(10);    // 設定為 10% 運行電流
-  stepper.setHoldCurrent(5);    // 設定為 5% 保持電流
+  stepper.setRunCurrent(40);    // 設定為 40% 運行電流
+  stepper.setHoldCurrent(20);   // 設定為 20% 保持電流
   stepper.setPwmOffset(0);      // 重置 PWM 偏移
   stepper.setPwmGradient(0);    // 重置 PWM 梯度
 }

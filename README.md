@@ -2,69 +2,36 @@
 
 ## 從光柵照片預測旋轉量
 
-## 馬達接線
+### 拍攝光柵圖片訓練集
 
-### Jetson Orin Nano 與 TMC5160T Pro 接線表
+拍攝光柵照片的相機為Basler acA4024-29UC，鏡頭使用20MP f 12mm 2.8mm，相機距離光柵板平面11cm。訓練照片都是灰階單通道的png影像，儲存於[grating_alignment](grating_alignment/rotated-grating-images-topview.tar)。此壓縮檔版本用gitlfs追蹤，並上傳至Github。請用下列指令下載git lfs檔案。
 
-#### 基本 SPI 通訊連接
+```bash
+# 下載git lfs檔案
+git lfs install
+git lfs pull
+```
 
-| Jetson Orin Nano 40-pin Header | TMC5160T Pro V1.1 | 功能說明 | 是否必需 |
-|--------------------------------|-------------------|----------|----------|
-| Pin 19 (SPI1_MOSI) | (MOSI)CFG1 | SPI 主機輸出/從機輸入 | ✅ 必需 |
-| Pin 21 (SPI1_MISO) | (MISO)CFG0 | SPI 主機輸入/從機輸出 | ✅ 必需 |
-| Pin 23 (SPI1_SCLK) | (SCK)CFG2  | SPI 時鐘信號 | ✅ 必需 |
-| Pin 15 (GPIO) | CS(CFG3) | 晶片選擇（低電位有效）| ✅ 必需 |
-| ---           | CLK
+光柵旋轉量在拍攝照片時使用直尺和arctan函數求得，記錄在
+[grating_alignment](grating_alignment/rotated-grating-images-topview.tar)
+裡的兩分試算表。
 
-#### 電源連接
+## 步進馬達接線與控制
 
-| Jetson Orin Nano 40-pin Header | TMC5160T Pro V1.1 | 功能說明 | 是否必需 |
-|--------------------------------|-------------------|----------|----------|
-| Pin 2 (5V) | VCC | 5V 電源輸入 | ✅ 必需 |
-| Pin 6 (GND) | GND | 接地 | ✅ 必需 |
-| Pin 14 (GND) | GND | 接地（多點接地） | ✅ 建議 |
+### 接線
 
-#### 可選控制信號
+Jetson Orin Nano與Arduino之間使用USB供電與通訊，其他元件的接線方式如下:
 
-| Jetson Orin Nano 40-pin Header | TMC5160T Pro V1.1 | 功能說明 | 是否必需 |
-|--------------------------------|-------------------|----------|----------|
-| Pin 11 (GPIO) | ENN/EN | 硬體使能（低電位有效） | ❌ 可選 |
-| Pin 13 (GPIO) | DIAG0 | 診斷輸出 0 | ❌ 可選 |
-| Pin 16 (GPIO) | DIAG1 | 診斷輸出 1 | ❌ 可選 |
-
-#### 馬達連接
-
-| TMC5160T Pro V1.1 | 步進馬達 | 功能說明 |
-|-------------------|----------|----------|
-| A+ | 線圈 A 正極 | 馬達 A 相正極 |
-| A- | 線圈 A 負極 | 馬達 A 相負極 |
-| B+ | 線圈 B 正極 | 馬達 B 相正極 |
-| B- | 線圈 B 負極 | 馬達 B 相負極 |
-
-#### 電源規格
-
-| 項目 | 規格 | 說明 |
-|------|------|------|
-| 邏輯電源 | 5V | 從 Jetson 5V pin 供電 |
-| 馬達電源 | 12V-24V | 需要外部電源供應器 |
-| 最大電流 | 4.0A | TMC5160T Pro V1.1 最大連續電流 |
-| 最大電壓 | 24V | TMC5160T Pro V1.1 最大工作電壓 |
-
-#### 程式碼對應設定
-
-| 參數 | 值 | 說明 |
-|------|-----|------|
-| `spi_bus` | 0 | SPI 匯流排編號 |
-| `spi_device` | 0 | SPI 裝置編號 |
-| `cs_pin` | 15 | 晶片選擇 GPIO pin |
-| `enn_pin` | 11 | 硬體使能 GPIO pin（可選） |
-| `diag0_pin` | 13 | 診斷 0 GPIO pin（可選） |
-| `diag1_pin` | 16 | 診斷 1 GPIO pin（可選） |
-
-### 注意事項
-
-- **SPI 模式**：模式 0，速度 4MHz
-- **GPIO 模式**：BOARD 模式（使用實體 pin 編號）
-- **電源隔離**：確保馬達電源與邏輯電源分離
-- **接地**：所有 GND 必須連接良好
-- **線序**：馬達線序必須正確，否則馬達可能不轉或震動
+|Arduino Uno|TMC2209|步進馬達57BYGH56|24V電源供應器|功能|
+|-----------|-------|---------------|------------|----|
+|7          |EN     |               |            |允許馬達線圈通電|
+|10         |TX     |               |            |Software Serial RX|
+|11         |RX     |               |            |Software Serial TX|
+|GND        |GND    |               |            |共同接地|
+|5V         |VIO    |               |            |邏輯電壓|
+|           |A2     |綠A-           |            |馬達A相負極|
+|           |A1     |紅A+           |            |馬達A相正極|
+|           |B1     |藍B+           |            |馬達B相正極|
+|           |B2     |黃B-           |            |馬達B相負極|
+|           |VM     |               |V+          |馬達驅動電源|
+|           |GND    |               |V-          |與arduino和驅動板共同接地|
