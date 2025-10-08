@@ -5,6 +5,7 @@
 
 constexpr uint8_t OUTPUT_BUFFER_SIZE = 192;
 constexpr uint8_t INPUT_BUFFER_SIZE = 32;
+constexpr uint16_t STALL_GUARD_THRESHOLD = 252;
 
 // 定義命令代碼枚舉
 enum CommandCode {
@@ -34,7 +35,6 @@ void setup()
     pinMode(DIAG_PIN, INPUT);
 
     stepper.setup(driverSerial, UNO_BAUDRATE);
-    stepper.enableStealthChop();
     stepper.setHardwareEnablePin(ENABLE_PIN);
     stepper.setMicrostepsPerStepPowerOfTwo(1);
     resetToSafeCurrentSettings();
@@ -43,9 +43,12 @@ void setup()
     // A higher value gives a higher sensitivity. A higher value makes StallGuard4 more sensitive and requires less torque to indicate a stall. 
     // when calling getStallGuardResult(), the returned value is the headroom before stall is declared.
     // if the returnd value of getStallGuardResult() is <= 240 * 2, then the motor is stalled.
-    stepper.setStallGuardThreshold(252);
+    stepper.setStallGuardThreshold(STALL_GUARD_THRESHOLD);
+    stepper.enableStealthChop();
     stepper.enableAutomaticCurrentScaling();
     stepper.enableAutomaticGradientAdaptation();
+    // stepper.setStealthChopDurationThreshold(0xFFFFF); // disable mode switch // not helpful
+    
 }
 
 void loop()
@@ -62,21 +65,22 @@ void loop()
         moveAtVelocity();
     }
 
-    const bool uartStall = checkStallGuardUart();
+    uint16_t uartStallResult = 0;
+    const bool uartStall = checkStallGuardUart(uartStallResult);
     const bool diagStall = digitalRead(DIAG_PIN) == LOW;
 
     char out_message[OUTPUT_BUFFER_SIZE] = { 0 };
     
     // 如果有新的命令訊息，則包含在回應中
     if (hasNewCommandMessage) {
-        snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s | UART Stall: %d, DIAG Stall: %d", 
-                lastCommandMessage, uartStall, diagStall);
+        snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s | SG Result: %d | UART Stall: %d | DIAG Stall: %d", 
+                lastCommandMessage, uartStallResult, uartStall, diagStall);
         hasNewCommandMessage = false; // 重置標記
     } else {
-        snprintf(out_message, OUTPUT_BUFFER_SIZE, "UART Stall: %d, DIAG Stall: %d", uartStall, diagStall);
+        snprintf(out_message, OUTPUT_BUFFER_SIZE, "SG Result: %d | UART Stall: %d | DIAG Stall: %d", uartStallResult, uartStall, diagStall);
     }
     
-    sendResponse(out_message, true, 0);
+    sendResponse(out_message, true, uartStallResult);
 }
 
 void resetToSafeCurrentSettings() 
@@ -85,8 +89,8 @@ void resetToSafeCurrentSettings()
     // 抱歉我炸過一塊TMC2209
     stepper.setRunCurrent(50);    // 設定為 50% 運行電流
     stepper.setHoldCurrent(20);   // 設定為 20% 保持電流
-    stepper.setPwmOffset(0);      // 重置 PWM 偏移。enableAutomaticCurrentScaling模式下，PwmOffset數值僅用於初始化，此參數會自動調整
-    stepper.setPwmGradient(0);    // 重置 PWM 梯度。enableAutomaticGradientAdaptation模式下，PwmGradient數值僅用於初始化，此參數會自動調整
+    stepper.setPwmOffset(20);      // 重置 PWM 偏移。enableAutomaticCurrentScaling模式下，PwmOffset數值僅用於初始化，此參數會自動調整
+    stepper.setPwmGradient(50);    // 重置 PWM 梯度。enableAutomaticGradientAdaptation模式下，PwmGradient數值僅用於初始化，此參數會自動調整
 }
 
 void processCommand(const char* jsonInput) 
@@ -138,15 +142,14 @@ bool executeCommand(int32_t commandCode, JsonVariant value, int32_t& out_value, 
         }
       }
       case CMD_SET_VELOCITY: {
-        if (value.is<int32_t>()) {
-          velocity = value.as<int32_t>();
-          out_value = velocity;
-          snprintf(out_message, OUTPUT_BUFFER_SIZE, "Velocity set to %d", velocity);
-          return true;
-        } else {
-          strcpy(out_message, "Velocity must be int.");
-          return false;
-        }
+        stepper.enableStealthChop();
+        stepper.moveAtVelocity(600);
+        delay(100);
+        stepper.moveAtVelocity(-600);
+        delay(100);
+        stepper.moveAtVelocity(0);
+        strcpy(out_message, "Run complete.");
+        return true;
       }
       case CMD_MOVE: {
         if (value.is<int32_t>()) {
@@ -203,10 +206,10 @@ void moveAtVelocity()
     stepper.moveAtVelocity(velocity);
 }
 
-bool checkStallGuardUart()
+bool checkStallGuardUart(uint16_t& out_sgResult)
 {
-    uint16_t sgResult = stepper.getStallGuardResult();
-    return sgResult <= 240 * 2; // according to the datasheet, stall is declared when sgResult <= 240 * 2
+    out_sgResult = stepper.getStallGuardResult();
+    return out_sgResult <= STALL_GUARD_THRESHOLD * 2; // according to the datasheet, stall is declared when sgResult <= 240 * 2
 }
 
 bool parseCommand(const char* jsonInput, int32_t& out_commandCode, JsonVariant& out_value) 
