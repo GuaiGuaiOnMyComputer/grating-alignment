@@ -49,6 +49,7 @@ void setup() {
   stepper.enableAutomaticCurrentScaling();
   stepper.enableAutomaticGradientAdaptation();
   stepper.setStandstillMode(TMC2209::NORMAL);
+  stepper.setMicrostepsPerStepPowerOfTwo(1);
   
   // 設定安全的電流值，防止馬達過熱
   resetToSafeCurrentSettings();
@@ -447,10 +448,11 @@ void sendErrorResponse(const char* errorMessage) {
 
 void resetToSafeCurrentSettings() {
   // 將電流設定重置為安全值，防止馬達過熱
+  // 抱歉我炸過一塊TMC2209
   stepper.setRunCurrent(40);    // 設定為 40% 運行電流
   stepper.setHoldCurrent(20);   // 設定為 20% 保持電流
-  stepper.setPwmOffset(0);      // 重置 PWM 偏移
-  stepper.setPwmGradient(0);    // 重置 PWM 梯度
+  stepper.setPwmOffset(0);      // 重置 PWM 偏移。enableAutomaticCurrentScaling模式下，PwmOffset數值僅用於初始化，此參數會自動調整
+  stepper.setPwmGradient(0);    // 重置 PWM 梯度。enableAutomaticGradientAdaptation模式下，PwmGradient數值僅用於初始化，此參數會自動調整
 }
 
 bool sensorlessHoming(uint8_t direction, char* out_message, int32_t& out_value) {
