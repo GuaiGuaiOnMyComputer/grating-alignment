@@ -29,8 +29,18 @@ bool hasNewCommandMessage = false;
 void setup() 
 {
 
-    Serial.begin(UNO_BAUDRATE);
+    
     while (!Serial) {}
+
+    for (int i = 0; i < 5; i++)
+    {
+      Serial.begin(UNO_BAUDRATE);
+      Serial.println("The diag terminal on the board is likely not connected to the diag pin on the IC.");
+      Serial.println("Stall guard is not available on BigTreeTech TMC2209 braekout board.");
+      Serial.println("Cannot read information because the breakout board only supports write operation through UART.");
+      Serial.println("=============================================================================================.");
+      delay(1000);
+    }
 
     pinMode(DIAG_PIN, INPUT);
 

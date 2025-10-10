@@ -3,8 +3,8 @@ import datetime
 import pypylon.pylon
 from pathlib import Path
 from os import path, makedirs
-from pypylon import pylon
 from typing import Tuple
+from pypylon import pylon
 from pypylon.pylon import TimeoutHandling_ThrowException, TimeoutException, ImageFormatConverter
 from pypylon.pylon import InstantCamera, GrabResult
 from pypylon.genicam import INodeMap, IEnumeration, IEnumEntry, INode, IFloat, IInteger, IBoolean
@@ -66,7 +66,7 @@ class PylonCameraWrapper(FrameProviderAbc, SettingPersistentCameraAbc):
         """Log camera information to the logger."""
         camera_info = self.get_camera_info()
         for key, value in camera_info.items():
-            self.__logger.info(f"{key.replace('_', ' ').title()}: {value}")
+            self.__logger.info("%s: %s", key.replace('_', ' ').title(), value)
 
     def get_frame(self) -> GrabbedImage | Exception:
 
@@ -101,23 +101,23 @@ class PylonCameraWrapper(FrameProviderAbc, SettingPersistentCameraAbc):
             file_path:str = str(file_path)
 
         if not file_path.endswith(".pfs"):
-            self.__logger.warning(f"File path does not end with .pfs: {file_path}")
+            self.__logger.warning("File path does not end with .pfs: %s", file_path)
 
         # Create the directory if it does not exist
         if not path.exists(path.dirname(file_path)):
             try:
                 makedirs(path.dirname(file_path))
             except Exception as e:
-                self.__logger.error(f"Error creating directory {path.dirname(file_path)}: {e}")
+                self.__logger.error("Error creating directory %s: %s", path.dirname(file_path), e)
                 return e
 
         try:
             pylon.FeaturePersistence.Save(file_path, self.__node_map)
         except Exception as e:
-            self.__logger.error(f"Error saving camera settings to {file_path}: {e}")
+            self.__logger.error("Error saving camera settings to %s: %s", file_path, e)
             return e
 
-        self.__logger.info(f"Camera settings saved to {file_path}")
+        self.__logger.info("Camera settings saved to %s", file_path)
 
     def load_camera_settings(self, file_path:str) -> Exception | None:
         """
@@ -130,10 +130,10 @@ class PylonCameraWrapper(FrameProviderAbc, SettingPersistentCameraAbc):
         try:
             pylon.FeaturePersistence.Load(file_path, self.__node_map)
         except Exception as e:
-            self.__logger.error(f"Error loading camera settings from {file_path}: {e}")
+            self.__logger.error("Error loading camera settings from %s: %s", file_path, e)
             return e
         
-        self.__logger.info(f"Camera settings loaded from {file_path}")
+        self.__logger.info("Camera settings loaded from %s", file_path)
 
     @property
     def pixel_format(self) -> PixelFormatEnum:
@@ -556,3 +556,18 @@ class PylonCameraWrapper(FrameProviderAbc, SettingPersistentCameraAbc):
             
             case PixelFormatEnum.Mono8:
                 return pylon.PixelType_Mono8
+
+def create_first_instance_pylon_camera(logger: logging.Logger | None = None) -> PylonCameraWrapper | None:
+    """
+    Creates the first instance of a pylon camera.
+    Returns the camera if successful, or None if an error occurs.
+    """
+
+    camera: PylonCameraWrapper | None = None
+    try:
+        pylon_camera = pypylon.pylon.TlFactory.GetInstance().CreateFirstDevice()
+        camera = PylonCameraWrapper(pylon_camera, PixelFormatEnum.BGR8, logger)
+    except pypylon.pylon.RuntimeException as e:
+        logger.error("Error initializing pylon camera: %s", e)
+
+    return camera

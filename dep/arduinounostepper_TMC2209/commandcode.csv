@@ -22,3 +22,4 @@ CommandCode	MapToFunction	AvailableValues	Explanation
 20	isStandingStill()	—	Returns whether the motor is currently standing still
 21	sensorlessHoming(direction)	-1 or 1	Performs sensorless homing using StallGuard detection. Direction: -1 (negative) or 1 (positive)
 22	resetToSafeCurrent()	—	Resets the driver’s current settings to safe values to prevent overheating
+23	motorSprint()   —   Briefly sprint the motor forward then backwards for 100ms to help StealthCrop learn the motor's characteristics. Recommand to run this function after motor enabled to train StealthCrop parameters. The slider will travel 1cm and return.

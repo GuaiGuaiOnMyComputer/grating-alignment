@@ -33,6 +33,7 @@ class TMC2209Command(IntEnum):
     IS_STANDING_STILL = 20
     SENSORLESS_HOMING = 21
     RESET_TO_SAFE_CURRENT = 22
+    MOTOR_SPRINT = 23
 
 class StandstillMode(IntEnum):
     """Standstill mode values for command 11"""
@@ -105,6 +106,11 @@ class ArduinoStepper_TMC2209:
             handler.setFormatter(formatter)
             logger.addHandler(handler)
         return logger
+
+    @property
+    def is_serial_connected(self) -> bool:
+        """Check if the stepper motor is connected"""
+        return self.serial_conn is not None and self.serial_conn.is_open
 
     def connect(self) -> bool:
         """Connect to Arduino via serial port"""
@@ -236,6 +242,10 @@ class ArduinoStepper_TMC2209:
     def is_standing_still(self) -> _DriverBoardResponse:
         """Check if motor is standing still"""
         return self._send_command_and_receive_response(_DriverBoardCommand(TMC2209Command.IS_STANDING_STILL))
+
+    def motor_sprint(self) -> _DriverBoardResponse:
+        """Sprint the motor. Recommand to run this function after motor enabled to train StealthCrop parameters."""
+        return self._send_command_and_receive_response(_DriverBoardCommand(TMC2209Command.MOTOR_SPRINT))
 
     def reset_to_safe_current(self) -> _DriverBoardResponse:
         """Reset to safe current"""

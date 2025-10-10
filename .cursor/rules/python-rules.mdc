@@ -1,0 +1,26 @@
+---
+alwaysApply: true
+globs: *.py
+---
+
+# Python programming guidlines
+
+## Logging
+- Avoid emojis in log messages.
+- Prefer log statements using loggers than print statements.
+- Avoid f-strings in logger statements, use proper value place holders instead.
+
+## Type annotation
+- Apply type annotations on all function parameters and return types.
+- Apply type annotations to local variables.
+
+## Comments
+- Avoid emojis in comments.
+- Generate comments for functions and methods with the following bullitins: Summary, Parameters and Return value. No need to generate comments about Parameters if the function only takes in ```self```.
+- Provide concise explanation to each parameter.
+
+## Error handling
+- Only apply try-catch statements when the task in the program do not assign variables that other block of code depends on.
+
+## PyQt and PyQt5
+- Ensure compatibility with PyQt6.

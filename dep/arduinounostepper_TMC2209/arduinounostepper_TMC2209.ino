@@ -34,7 +34,8 @@ enum CommandCode {
   CMD_GET_STALL_GUARD_RESULT = 19,
   CMD_IS_STANDING_STILL = 20,
   CMD_SENSORLESS_HOMING = 21,
-  CMD_RESET_TO_SAFE_CURRENT = 22
+  CMD_RESET_TO_SAFE_CURRENT = 22,
+  CMD_MOTOR_SPRINT = 23
 };
 
 void setup() {
@@ -50,9 +51,9 @@ void setup() {
   stepper.enableAutomaticGradientAdaptation();
   stepper.setStandstillMode(TMC2209::NORMAL);
   stepper.setMicrostepsPerStepPowerOfTwo(1);
-  
+
   // 設定安全的電流值，防止馬達過熱
-  resetToSafeCurrentSettings();
+  resetToSafeCurrentSettings(nullptr);
 
   sendResponse("Ready.", true, 0);
 }
@@ -103,46 +104,48 @@ bool parseCommand(const char* jsonInput, int32_t& out_commandCode, JsonVariant& 
 
 bool executeCommand(int32_t commandCode, JsonVariant value, int32_t& out_value, char* out_message) {
   switch (commandCode) {
-    case CMD_ENABLE: {
-      if (value.is<int32_t>()) {
-        int32_t enableValue = value.as<int32_t>();
-        if (enableValue == 1) {
-          stepper.enable();
-          out_value = 1;
-          strcpy(out_message, "ENB");
-          return true;
-        } else if (enableValue == 0) {
-          stepper.disable();
-          out_value = 0;
-          strcpy(out_message, "DSB");
-          return true;
+    case CMD_ENABLE:
+      {
+        if (value.is<int32_t>()) {
+          int32_t enableValue = value.as<int32_t>();
+          if (enableValue == 1) {
+            stepper.enable();
+            out_value = 1;
+            strcpy(out_message, "ENB");
+            return true;
+          } else if (enableValue == 0) {
+            stepper.disable();
+            out_value = 0;
+            strcpy(out_message, "DSB");
+            return true;
+          } else {
+            strcpy(out_message, "Enable must = 0 or 1");
+            return false;
+          }
         } else {
-          strcpy(out_message, "Enable must = 0 or 1");
+          strcpy(out_message, "Enable is int.");
           return false;
         }
-      } else {
-        strcpy(out_message, "Enable is int.");
-        return false;
       }
-    }
 
-    case CMD_SET_HARDWARE_ENABLE_PIN: {
-      if (value.is<int32_t>()) {
-        int32_t pin = value.as<int32_t>();
-        if (pin >= 0 && pin <= 255) {
-          stepper.setHardwareEnablePin(pin);
-          out_value = pin;
-          strcpy(out_message, "OK");
-          return true;
+    case CMD_SET_HARDWARE_ENABLE_PIN:
+      {
+        if (value.is<int32_t>()) {
+          int32_t pin = value.as<int32_t>();
+          if (pin >= 0 && pin <= 255) {
+            stepper.setHardwareEnablePin(pin);
+            out_value = pin;
+            strcpy(out_message, "OK");
+            return true;
+          } else {
+            strcpy(out_message, "Pin must be 0-255");
+            return false;
+          }
         } else {
-          strcpy(out_message, "Pin must be 0-255");
+          strcpy(out_message, "Pin is int.");
           return false;
         }
-      } else {
-        strcpy(out_message, "Pin is int.");
-        return false;
       }
-    }
 
     case CMD_HARDWARE_DISABLED:
       out_value = stepper.hardwareDisabled() ? 0 : 1;
@@ -152,208 +155,217 @@ bool executeCommand(int32_t commandCode, JsonVariant value, int32_t& out_value, 
     case CMD_ENABLE_ANALOG_CURRENT_SCALING:
       stepper.enableAnalogCurrentScaling();
       out_value = 1;
-      strcpy(out_message, "Analog CRT SCL ENB");
+      snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s %s %s %s", "Analog", "CRT", "SCL", "ENB");
       return true;
 
     case CMD_DISABLE_AUTOMATIC_CURRENT_SCALING:
       stepper.disableAutomaticCurrentScaling();
       out_value = 0;
-      strcpy(out_message, "Auto CRT SCL DSB");
+      snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s %s %s %s", "Auto", "CRT", "SCL", "DSB");
       return true;
 
     case CMD_ENABLE_AUTOMATIC_CURRENT_SCALING:
       stepper.enableAutomaticCurrentScaling();
       out_value = 1;
-      strcpy(out_message, "Auto CRT SCL ENB");
+      snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s %s %s %s", "Auto", "CRT", "SCL", "ENB");
       return true;
 
     case CMD_ENABLE_AUTOMATIC_GRADIENT_ADAPTATION:
       stepper.enableAutomaticGradientAdaptation();
       out_value = 1;
-      strcpy(out_message, "Auto GRAD ADA ENB");
+      snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s %s %s %s", "Auto", "GRAD", "ADA", "ENB");
       return true;
 
-    case CMD_SET_PWM_OFFSET: {
-      if (value.is<int>()) {
-        int pwmOffset = value.as<int>();
-        if (pwmOffset >= 0 && pwmOffset <= 255) {
-          stepper.setPwmOffset(pwmOffset);
-          out_value = pwmOffset;
-          strcpy(out_message, "OK");
-          return true;
+    case CMD_SET_PWM_OFFSET:
+      {
+        if (value.is<int>()) {
+          int pwmOffset = value.as<int>();
+          if (pwmOffset >= 0 && pwmOffset <= 255) {
+            stepper.setPwmOffset(pwmOffset);
+            out_value = pwmOffset;
+            snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s %s=%d", "PWM", "OFFSET", pwmOffset);
+            return true;
+          } else {
+            snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s %s %s", "PWM", "OFFSET", "in [0-255]");
+            return false;
+          }
         } else {
-          strcpy(out_message, "PWM offset in [0-255]");
+          snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s %s %s", "PWM", "OFFSET", "is int");
           return false;
         }
-      } else {
-        strcpy(out_message, "PWM offset is int");
-        return false;
       }
-    }
 
-    case CMD_SET_PWM_GRADIENT: {
-      if (value.is<int>()) {
-        int pwmGradient = value.as<int>();
-        if (pwmGradient >= 0 && pwmGradient <= 255) {
-          stepper.setPwmGradient(pwmGradient);
-          out_value = pwmGradient;
-          strcpy(out_message, "OK");
-          return true;
+    case CMD_SET_PWM_GRADIENT:
+      {
+        if (value.is<int>()) {
+          int pwmGradient = value.as<int>();
+          if (pwmGradient >= 0 && pwmGradient <= 255) {
+            stepper.setPwmGradient(pwmGradient);
+            out_value = pwmGradient;
+            snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s %s=%d", "PWM", "GRAD", pwmGradient);
+            return true;
+          } else {
+            snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s %s %s", "PWM", "GRAD", "in [0-255]");
+            return false;
+          }
         } else {
-          strcpy(out_message, "PWM gradient is int in [0-255]");
+          snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s %s %s", "PWM", "GRAD", "is int in [0-255]");
           return false;
         }
-      } else {
-        strcpy(out_message, "PWM gradient is int in [0-255]");
-        return false;
       }
-    }
 
-    case CMD_SET_RUN_CURRENT: {
-      if (value.is<int>()) {
-        int runCurrent = value.as<int>();
-        if (runCurrent >= 0 && runCurrent <= 100) {
-          stepper.setRunCurrent(runCurrent);
-          out_value = runCurrent;
-          strcpy(out_message, "OK");
-          return true;
+    case CMD_SET_RUN_CURRENT:
+      {
+        if (value.is<int>()) {
+          int runCurrent = value.as<int>();
+          if (runCurrent >= 0 && runCurrent <= 100) {
+            stepper.setRunCurrent(runCurrent);
+            out_value = runCurrent;
+            strcpy(out_message, "OK");
+            return true;
+          } else {
+            strcpy(out_message, "Run CRT is int in [0, 100]");
+            return false;
+          }
         } else {
           strcpy(out_message, "Run CRT is int in [0, 100]");
           return false;
         }
-      } else {
-        strcpy(out_message, "Run CRT is int in [0, 100]");
-        return false;
       }
-    }
 
-    case CMD_SET_HOLD_CURRENT: {
-      if (value.is<int>()) {
-        int holdCurrent = value.as<int>();
-        if (holdCurrent >= 0 && holdCurrent <= 100) {
-          stepper.setHoldCurrent(holdCurrent);
-          out_value = holdCurrent;
-          strcpy(out_message, "OK");
-          return true;
+    case CMD_SET_HOLD_CURRENT:
+      {
+        if (value.is<int>()) {
+          int holdCurrent = value.as<int>();
+          if (holdCurrent >= 0 && holdCurrent <= 100) {
+            stepper.setHoldCurrent(holdCurrent);
+            out_value = holdCurrent;
+            snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s %s=%d", "Hold", "CRT", holdCurrent);
+            return true;
+          } else {
+            snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s %s %s", "Hold", "CRT", "is int in [0, 100]");
+            return false;
+          }
         } else {
-          strcpy(out_message, "Hold CRT is int in [0, 100]");
+          snprintf(out_message, OUTPUT_BUFFER_SIZE, "%s %s %s", "Hold", "CRT", "is int in [0, 100]");
           return false;
         }
-      } else {
-        strcpy(out_message, "Hold CRT is int in [0, 100]");
-        return false;
       }
-    }
 
-    case CMD_SET_STANDSTILL_MODE: {
-      if (value.is<int>()) {
-        int mode = value.as<int>();
-        switch (mode) {
-          case 0:
-            stepper.setStandstillMode(TMC2209::NORMAL);
-            out_value = 0;
-            snprintf(out_message, OUTPUT_BUFFER_SIZE, "Standstill mode=%d", mode);
-            return true;
-          case 1:
-            stepper.setStandstillMode(TMC2209::FREEWHEELING);
-            out_value = 1;
-            snprintf(out_message, OUTPUT_BUFFER_SIZE, "Standstill mode=%d", mode);
-            return true;
-          case 2:
-            stepper.setStandstillMode(TMC2209::STRONG_BRAKING);
-            out_value = 2;
-            snprintf(out_message, OUTPUT_BUFFER_SIZE, "Standstill mode=%d", mode);
-            return true;
-          case 3:
-            stepper.setStandstillMode(TMC2209::BRAKING);
-            out_value = 3;
-            snprintf(out_message, OUTPUT_BUFFER_SIZE, "Standstill mode=%d", mode);
-            return true;
-          default:
-            strcpy(out_message, "Standstill mode is int in [0-3]");
-            return false;
+    case CMD_SET_STANDSTILL_MODE:
+      {
+        if (value.is<int>()) {
+          int mode = value.as<int>();
+          switch (mode) {
+            case 0:
+              stepper.setStandstillMode(TMC2209::NORMAL);
+              out_value = 0;
+              snprintf(out_message, OUTPUT_BUFFER_SIZE, "Standstill mode=%d", mode);
+              return true;
+            case 1:
+              stepper.setStandstillMode(TMC2209::FREEWHEELING);
+              out_value = 1;
+              snprintf(out_message, OUTPUT_BUFFER_SIZE, "Standstill mode=%d", mode);
+              return true;
+            case 2:
+              stepper.setStandstillMode(TMC2209::STRONG_BRAKING);
+              out_value = 2;
+              snprintf(out_message, OUTPUT_BUFFER_SIZE, "Standstill mode=%d", mode);
+              return true;
+            case 3:
+              stepper.setStandstillMode(TMC2209::BRAKING);
+              out_value = 3;
+              snprintf(out_message, OUTPUT_BUFFER_SIZE, "Standstill mode=%d", mode);
+              return true;
+            default:
+              strcpy(out_message, "Standstill mode is int in [0-3]");
+              return false;
+          }
+        } else {
+          strcpy(out_message, "Standstill mode is int in [0-3]");
+          return false;
         }
-      } else {
-        strcpy(out_message, "Standstill mode is int in [0-3]");
-        return false;
       }
-    }
 
-    case CMD_SET_STALL_GUARD_THRESHOLD: {
-      if (value.is<int>()) {
-        int threshold = value.as<int>();
-        if (threshold >= 0 && threshold <= 255) {
-          stepper.setStallGuardThreshold(threshold);
-          out_value = threshold;
-          snprintf(out_message, OUTPUT_BUFFER_SIZE, "StallGuard thesh=%d", threshold);
-          return true;
+    case CMD_SET_STALL_GUARD_THRESHOLD:
+      {
+        if (value.is<int>()) {
+          int threshold = value.as<int>();
+          if (threshold >= 0 && threshold <= 255) {
+            stepper.setStallGuardThreshold(threshold);
+            out_value = threshold;
+            snprintf(out_message, OUTPUT_BUFFER_SIZE, "StallGuard thesh=%d", threshold);
+            return true;
+          } else {
+            strcpy(out_message, "Threshold is int in [0-255]");
+            return false;
+          }
         } else {
           strcpy(out_message, "Threshold is int in [0-255]");
           return false;
         }
-      } else {
-        strcpy(out_message, "Threshold is int in [0-255]");
-        return false;
       }
-    }
 
-    case CMD_SET_MICROSTEPS_PER_STEP: {
-      if (value.is<int>()) {
-        int microsteps = value.as<int>();
-        if (isPowerOfTwo(microsteps)) {
-          stepper.setMicrostepsPerStep(microsteps);
-          out_value = microsteps;
-          snprintf(out_message, OUTPUT_BUFFER_SIZE, "Microstep=1/%d", microsteps);
-          return true;
+    case CMD_SET_MICROSTEPS_PER_STEP:
+      {
+        if (value.is<int>()) {
+          int microsteps = value.as<int>();
+          if (isPowerOfTwo(microsteps)) {
+            stepper.setMicrostepsPerStep(microsteps);
+            out_value = microsteps;
+            snprintf(out_message, OUTPUT_BUFFER_SIZE, "Microstep=1/%d", microsteps);
+            return true;
+          } else {
+            strcpy(out_message, "Microsteps is int and must be power of 2");
+            return false;
+          }
         } else {
           strcpy(out_message, "Microsteps is int and must be power of 2");
           return false;
         }
-      } else {
-        strcpy(out_message, "Microsteps is int and must be power of 2");
-        return false;
       }
-    }
 
-    case CMD_SET_MICROSTEPS_PER_STEP_POWER_OF_TWO: {
-      if (value.is<int>()) {
-        int exponent = value.as<int>();
-        if (exponent >= 0 && exponent <= 6) {
-          stepper.setMicrostepsPerStepPowerOfTwo(exponent);
-          out_value = exponent;
-          strcpy(out_message, "Ok");
-          return true;
+    case CMD_SET_MICROSTEPS_PER_STEP_POWER_OF_TWO:
+      {
+        if (value.is<int>()) {
+          int exponent = value.as<int>();
+          if (exponent >= 0 && exponent <= 6) {
+            stepper.setMicrostepsPerStepPowerOfTwo(exponent);
+            out_value = exponent;
+            strcpy(out_message, "Ok");
+            return true;
+          } else {
+            strcpy(out_message, "Exponent is int in [0-6]");
+            return false;
+          }
         } else {
           strcpy(out_message, "Exponent is int in [0-6]");
           return false;
         }
-      } else {
-        strcpy(out_message, "Exponent is int in [0-6]");
-        return false;
       }
-    }
 
-    case CMD_MOVE_AT_VELOCITY: {
-      if (!value.is<int>()) {
-        strcpy(out_message, "Velocity is int");
-        return false;
-      }
-      const int velocity = value.as<int>();
+    case CMD_MOVE_AT_VELOCITY:
+      {
+        if (!value.is<int>()) {
+          strcpy(out_message, "Velocity is int");
+          return false;
+        }
+        const int velocity = value.as<int>();
 
-      if (velocity == 0) {
-        motorMoving = false;
+        if (velocity == 0) {
+          motorMoving = false;
+          stepper.moveAtVelocity(velocity);
+          out_value = velocity;
+          strcpy(out_message, "Motor stop.");
+          return true;
+        }
+
+        motorMoving = true;
         stepper.moveAtVelocity(velocity);
         out_value = velocity;
-        strcpy(out_message, "Motor stop.");
+        snprintf(out_message, OUTPUT_BUFFER_SIZE, "Move at v=%d", velocity);
         return true;
       }
-      
-      motorMoving = true;
-      stepper.moveAtVelocity(velocity);
-      out_value = velocity;
-      snprintf(out_message, OUTPUT_BUFFER_SIZE, "Move at v=%d", velocity);
-      return true;
-    }
 
     case CMD_GET_STALL_GUARD_RESULT:
       out_value = stepper.getStallGuardResult();
@@ -371,53 +383,60 @@ bool executeCommand(int32_t commandCode, JsonVariant value, int32_t& out_value, 
       strcpy(out_message, stepper.isSetupAndCommunicating() ? "Setup OK" : "Setup failed");
       return true;
 
-    case CMD_SET_REPLY_DELAY: {
-      if (value.is<int>()) {
-        int delay = value.as<int>();
-        stepper.setReplyDelay(delay);
-        out_value = delay;
-        strcpy(out_message, "OK");
+    case CMD_SET_REPLY_DELAY:
+      {
+        if (value.is<int>()) {
+          int delay = value.as<int>();
+          stepper.setReplyDelay(delay);
+          out_value = delay;
+          strcpy(out_message, "OK");
+          return true;
+        } else {
+          strcpy(out_message, "Delay is int");
+          return false;
+        }
+      }
+
+    case CMD_IS_STANDING_STILL:
+      {
+        TMC2209::Status status = stepper.getStatus();
+        out_value = status.standstill ? 1 : 0;
+        strcpy(out_message, status.standstill ? "Standing still" : "Moving");
         return true;
-      } else {
-        strcpy(out_message, "Delay is int");
-        return false;
-      }
-    }
-
-    case CMD_IS_STANDING_STILL: {
-      TMC2209::Status status = stepper.getStatus();
-      out_value = status.standstill ? 1 : 0;
-      strcpy(out_message, status.standstill ? "Standing still" : "Moving");
-      return true;
-    }
-      
-    case CMD_SENSORLESS_HOMING: {
-      if (!value.is<uint8_t>()) {
-        strcpy(out_message, "Direction is uint8_t 0 or 1");
-        return false;
       }
 
-      const uint8_t direction = value.as<uint8_t>();
-      if (!(direction == 0 || direction == 1)) {
-        strcpy(out_message, "Direction is uint8_t 0 or 1");
-        return false;
+    case CMD_SENSORLESS_HOMING:
+      {
+        if (!value.is<uint8_t>()) {
+          strcpy(out_message, "Direction is uint8_t 0 or 1");
+          return false;
+        }
+
+        const uint8_t direction = value.as<uint8_t>();
+        if (!(direction == 0 || direction == 1)) {
+          strcpy(out_message, "Direction is uint8_t 0 or 1");
+          return false;
+        }
+
+        return sensorlessHoming(direction, out_message, out_value);
       }
 
-      return sensorlessHoming(direction, out_message, out_value);
-    }
+    case CMD_RESET_TO_SAFE_CURRENT:
+      {
+        resetToSafeCurrentSettings(out_message);
+        out_value = 1;
+        return true;
+      }
 
-    case CMD_RESET_TO_SAFE_CURRENT: {
-      resetToSafeCurrentSettings();
-      out_value = 1;
-      strcpy(out_message, "Reset to safe current settings");
-      return true;
-    }
+    case CMD_MOTOR_SPRINT:
+      {
+        return motorSprint(out_message, out_value);
+      }
 
     default:
       out_value = commandCode;
       snprintf(out_message, OUTPUT_BUFFER_SIZE, "Unknown CommandCode %d", commandCode);
       return false;
-    
   }
 }
 
@@ -431,7 +450,7 @@ void sendResponse(const char* message, const bool& success, const int32_t& value
   response["message"] = message;
   response["value"] = value;
 
-  char jsonBuffer[OUTPUT_BUFFER_SIZE];  // 相應減少緩衝區大小
+  char jsonBuffer[OUTPUT_BUFFER_SIZE] = {0};
   size_t len = serializeJson(response, jsonBuffer, sizeof(jsonBuffer));
 
   if (response.overflowed()) {
@@ -446,13 +465,50 @@ void sendErrorResponse(const char* errorMessage) {
   sendResponse(errorMessage, false, 0);
 }
 
-void resetToSafeCurrentSettings() {
+bool motorSprint(char* out_message, int32_t& out_value) {
+
+  if (motorMoving) {
+    strcpy(out_message, "Motor is busy");
+    out_value = -1;
+    return false;
+  }
+
+  if (stepper.hardwareDisabled()) {
+    strcpy(out_message, "MTR DSB");
+    out_value = -1;
+    return false;
+  }
+
+  motorMoving = true;
+  stepper.enableStealthChop();
+  stepper.moveAtVelocity(600);
+  delay(100);
+  stepper.moveAtVelocity(-600);
+  delay(100);
+  stepper.moveAtVelocity(0);
+  motorMoving = false;
+  strcpy(out_message, "Run complete.");
+  out_value = 0;
+
+  return true;
+}
+
+void resetToSafeCurrentSettings(char* out_message) {
   // 將電流設定重置為安全值，防止馬達過熱
   // 抱歉我炸過一塊TMC2209
-  stepper.setRunCurrent(40);    // 設定為 40% 運行電流
-  stepper.setHoldCurrent(20);   // 設定為 20% 保持電流
-  stepper.setPwmOffset(0);      // 重置 PWM 偏移。enableAutomaticCurrentScaling模式下，PwmOffset數值僅用於初始化，此參數會自動調整
-  stepper.setPwmGradient(0);    // 重置 PWM 梯度。enableAutomaticGradientAdaptation模式下，PwmGradient數值僅用於初始化，此參數會自動調整
+
+  constexpr uint8_t RUN_CURRENT = 50;
+  constexpr uint8_t HOLD_CURRENT = 20;
+  constexpr uint8_t PWM_OFFSET = 20;
+  constexpr uint8_t PWM_GRADIENT = 50;
+
+  stepper.setRunCurrent(RUN_CURRENT);    // 設定為 50% 運行電流
+  stepper.setHoldCurrent(HOLD_CURRENT);  // 設定為 20% 保持電流
+  stepper.setPwmOffset(PWM_OFFSET);      // 重置 PWM 偏移。enableAutomaticCurrentScaling模式下，PwmOffset數值僅用於初始化，此參數會自動調整
+  stepper.setPwmGradient(PWM_GRADIENT);  // 重置 PWM 梯度。enableAutomaticGradientAdaptation模式下，PwmGradient數值僅用於初始化，此參數會自動調整
+
+  if (out_message != nullptr)
+    snprintf(out_message, OUTPUT_BUFFER_SIZE, "Run CRT=%d%, Hold CRT=%d%, PWM offset=%d%, PWM gradient=%d%", RUN_CURRENT, HOLD_CURRENT, PWM_OFFSET, PWM_GRADIENT);
 }
 
 bool sensorlessHoming(uint8_t direction, char* out_message, int32_t& out_value) {
@@ -461,46 +517,43 @@ bool sensorlessHoming(uint8_t direction, char* out_message, int32_t& out_value) 
     strcpy(out_message, "Motor is busy");
     return false;
   }
-  
+
   // 設定無感歸零參數
-  const uint8_t HOMING_SPEED = 100;           // 歸零速度
-  const uint8_t STALL_THRESHOLD = 10;         // StallGuard 門檻
-  const uint16_t TIMEOUT_MS = 5000;           // 超時時間 (5秒)
-  const uint8_t BACKOFF_SPEED = 50;           // 回退速度
-  const uint16_t BACKOFF_DURATION_MS = 200;   // 回退時間
-  
+  const uint8_t HOMING_SPEED = 100;          // 歸零速度
+  const uint8_t STALL_THRESHOLD = 10;        // StallGuard 門檻
+  const uint16_t TIMEOUT_MS = 5000;          // 超時時間 (5秒)
+  const uint8_t BACKOFF_SPEED = 50;          // 回退速度
+  const uint16_t BACKOFF_DURATION_MS = 200;  // 回退時間
+
   // 設定 StallGuard 參數
   stepper.setStallGuardThreshold(STALL_THRESHOLD);
-  
-  // 確保馬達啟用
-  stepper.enable();
-  
+
   // 開始向指定方向移動
   int32_t velocity = direction * HOMING_SPEED;
   stepper.moveAtVelocity(velocity);
   motorMoving = true;
-  
+
   unsigned long startTime = millis();
   bool homingSuccess = false;
-  
+
   // 輪詢 StallGuard 結果
   while (millis() - startTime < TIMEOUT_MS) {
     uint16_t stallValue = stepper.getStallGuardResult();
-    
+
     // 檢查是否觸發 StallGuard (值小於等於門檻)
     if (stallValue <= STALL_THRESHOLD) {
       homingSuccess = true;
       break;
     }
-    
+
     // 短暫延遲避免過度輪詢
     delay(10);
   }
-  
+
   // 停止馬達
   stepper.moveAtVelocity(0);
   motorMoving = false;
-  
+
   if (homingSuccess) {
     // 回退一小段距離
     stepper.moveAtVelocity(-direction * BACKOFF_SPEED);
@@ -508,7 +561,7 @@ bool sensorlessHoming(uint8_t direction, char* out_message, int32_t& out_value) 
     delay(BACKOFF_DURATION_MS);
     stepper.moveAtVelocity(0);
     motorMoving = false;
-    
+
     out_value = 1;
     strcpy(out_message, "Homing successful");
     return true;

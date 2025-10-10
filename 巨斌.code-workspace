@@ -17,6 +17,17 @@
 				"options": {
 					"cwd": "${workspaceFolder}/grating_alignment"
 				}
+			},
+			{
+				"label": "Compile UI",
+				"type": "shell",
+				"command": "powershell",
+				"args": [
+					"-Command",
+					"mamba activate grating_alignment; pyuic6 '${workspaceFolder}/grating_alignment/ui/ui.ui' -o '${workspaceFolder}/grating_alignment/ui/compiledui/CompiledUi.py'"
+				],
+				"options": {
+				}
 			}
 		]
 	},
@@ -32,7 +43,11 @@
 				"justMyCode": false,
 				"env": {
 					"PYTHONPATH": "${workspaceFolder}"
-				}
+				},
+				"preLaunchTask": "Compile UI",
+				"args": [
+					"--llevel", "10"
+				]
 			},
 			{
 				"name": "Debug stepper test",

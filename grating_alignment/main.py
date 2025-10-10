@@ -1,62 +1,42 @@
-import logging
-import os
 import sys
-import pypylon.pylon
-import json
-from typing import Tuple, List
-from logging import Handler, StreamHandler, FileHandler
-from dep.camerautils.Pylon.PylonCameraWrapper import PylonCameraWrapper
-from dep.camerautils.PixelFormatEnum import PixelFormatEnum
-from shared.LoggingFormatter import ColoredLoggingFormatter
+import logging
+from typing import Dict
+from ui.UserInterface import MainWindowUI
+from shared.LoggingUtils import ColoredConsoleLoggerFactorySingleton
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QCommandLineParser, QCommandLineOption
 
-def _initialize_logger(logger_name:str, log_to_console:bool = True, log_to_file:bool = False, log_level = logging.INFO) -> Tuple[logging.Logger, List[Handler]]:
-    logger:logging.Logger = logging.getLogger(logger_name)
-    logger.handlers.clear()
-    
-    console_handler: StreamHandler = StreamHandler()
-    handlers: List[Handler] = []
-    
-    console_handler.setFormatter(ColoredLoggingFormatter.instance())
-    console_handler.setLevel(log_level)
-    if log_to_console:
-        logger.addHandler(console_handler)
-        handlers.append(console_handler)
-    if log_to_file:
-        os.makedirs("logs", exist_ok = True)
-        file_handler: FileHandler = FileHandler(f"logs/{logger_name}.log")
-        file_handler.setFormatter(ColoredLoggingFormatter.instance())
-        file_handler.setLevel(log_level)
-        logger.addHandler(file_handler)
-        handlers.append(file_handler)
-    
-    logger.setLevel(log_level)
-    logger.propagate = False
-    return logger, handlers
+def _process_command_line_args(app:QApplication) -> Dict:
+    """
+    Summary:
+      Parse command line arguments. Please call this function after creating QApplication(sys.argv).
+    """
 
+    parser: QCommandLineParser = QCommandLineParser()
 
-def _acquire_pylon_camera_wrapper(logger:logging.Logger) -> PylonCameraWrapper | None:
+    log_level_option: QCommandLineOption = QCommandLineOption(("v", "llevel"), "Console log level.", valueName = "log_level", defaultValue = str(logging.INFO))
+    parser.addOption(log_level_option)
+    parser.process(app)
 
-    camera: PylonCameraWrapper | None = None
-    try:
-        pylon_camera = pypylon.pylon.TlFactory.GetInstance().CreateFirstDevice()
-        camera = PylonCameraWrapper(pylon_camera, PixelFormatEnum.BGR8, logger)
-    except pypylon.pylon.RuntimeException as e:
-        logger.error(f"Error initializing pylon camera: {e}")
-
-    return camera
+    return {
+        log_level_option.valueName(): int(parser.value(log_level_option))
+    }
 
 def main():
-    main_logger, _ = _initialize_logger(__name__, log_to_console = True)
-    pylon_logger, _ = _initialize_logger("pylon", log_to_console = True)
+    main_application = QApplication(sys.argv)
+    command_line_args:Dict = _process_command_line_args(main_application)
+
+    logger_factory: ColoredConsoleLoggerFactorySingleton = ColoredConsoleLoggerFactorySingleton.instance()
+    main_logger, _ = logger_factory.create_logger(__name__, default_level = command_line_args["log_level"])
+    main_logger.debug("Received command line arguments: %s", command_line_args)
 
     main_logger.info("Starting application...")
-    camera: PylonCameraWrapper | None = _acquire_pylon_camera_wrapper(pylon_logger)
-    if camera is None:
-        sys.exit(1)
+    main_gui_window:MainWindowUI = MainWindowUI(main_logger)
+    main_gui_window.show()
 
-    camera.initialize_camera()
-    main_logger.info(json.dumps(camera.get_camera_info(), indent = 4))
-    camera.start_camera_streaming()
+    sys.exit(main_application.exec())
+
+
 
 if __name__ == "__main__":
     main()
