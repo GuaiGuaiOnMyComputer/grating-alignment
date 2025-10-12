@@ -1,3 +1,4 @@
+import cv2
 import sys
 import time
 import importlib.resources
@@ -7,10 +8,12 @@ import functools
 from typing import List
 from logging import Logger
 from pathlib import Path
-from PyQt6.QtCore import QByteArray
-from PyQt6.QtGui import QIcon, QWheelEvent
-from PyQt6.QtWidgets import QMainWindow, QLabel
+from PyQt6.QtCore import QByteArray, QTimer, Qt
+from PyQt6.QtGui import QIcon, QWheelEvent, QImage, QPixmap
+from PyQt6.QtWidgets import QMainWindow, QLabel, QGraphicsScene, QGraphicsView, QGraphicsPixmapItem
 from dep.camerautils.Pylon import PylonCameraWrapper
+from dep.camerautils.GrabbedImage import GrabbedImage
+from dep.camerautils.PixelFormatEnum import PixelFormatEnum
 from dep.arduinounostepper_TMC2209.ArduinoStepper_TMC2209 import ArduinoStepper_TMC2209
 from shared.LoggingUtils import ColoredConsoleLoggerFactorySingleton
 from .compiledui.CompiledUi import Ui_MainWindow
@@ -32,6 +35,9 @@ class MainWindowUI(QMainWindow):
 
         self.__latest_motor_enable_toggle_time: float = 0.0
 
+
+        # TODO: remove debug code
+        self.__video_cap:cv2.VideoCapture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         self.__camera_wrapper: PylonCameraWrapper | None = None
         self.__stepper_motor_wrapper: ArduinoStepper_TMC2209 | None = None
 
@@ -41,6 +47,15 @@ class MainWindowUI(QMainWindow):
         self.__align_icon:QIcon = self.__load_icon_resource(Path("align.svg"))
         self.__arrow_forward_icon:QIcon = self.__load_icon_resource(Path("arrow-forward.svg"))
         self.__arrow_back_icon:QIcon = self.__load_icon_resource(Path("arrow-back.svg"))
+
+        self.__camera_scene = QGraphicsScene(self)
+        self.__ui.cameraFeed_grphv.setScene(self.__camera_scene)
+        self.__camera_pixel_map_item = QGraphicsPixmapItem()
+        self.__camera_scene.addItem(self.__camera_pixel_map_item)
+
+        self.__camera_update_timer = QTimer(self)
+        self.__camera_update_timer.timeout.connect(self.__update_camera_feed)
+        self.__camera_update_timer.start(30)
 
         self.__initialize_icons()
         self.__setup_callback_functions()
@@ -136,7 +151,35 @@ class MainWindowUI(QMainWindow):
         motor_manual_label_hover_event_filter.wheel_event_handler.append(self.__on_mouse_wheel_in_motor_manual_label)
         self.__ui.motorManual_lbl.installEventFilter(motor_manual_label_hover_event_filter)
 
+    def __update_camera_feed(self) -> None:
 
+        # get_frame_result: GrabbedImage | Exception = self.__camera_wrapper.get_frame()
+        # if isinstance(get_frame_result, Exception):
+        #     self.__logger.warning("Failed to grab the latest frame due to error: %s", repr(get_frame_result.message))
+        #     return
+
+        # if get_frame_result.pixel_format != PixelFormatEnum.Mono8:
+        #     self.__logger.warning("Received an image of pixel type %s, but %s is expected.", get_frame_result.pixel_format, PixelFormatEnum.Mono8)
+
+        # TODO: edit replace debug code
+        ret, frame = self.__video_cap.read()
+        if not ret:
+            self.__logger.warning("Failed to grab frame from video capture.")
+            return
+
+        # Convert OpenCV's BGR image to RGB
+        frame = frame[:, :, 0].copy()
+        img_height, img_width = frame.shape
+        bytes_per_line = img_width
+
+        # Create QImage from the numpy array
+        frame_as_qimage = QImage(frame.data, img_width, img_height, bytes_per_line, QImage.Format.Format_Grayscale8)
+        pixmap = QPixmap.fromImage(frame_as_qimage)
+
+        # Scale pixmap to fit the width of the view, maintaining aspect ratio
+        height = self.__ui.cameraFeed_grphv.viewport().height()
+        if height > 0:
+            self.__camera_pixel_map_item.setPixmap(pixmap.scaledToHeight(height, Qt.TransformationMode.SmoothTransformation))
 
     def __command_motor_manual_move(self, direction: int) -> None:
 

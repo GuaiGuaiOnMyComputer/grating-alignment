@@ -84,6 +84,7 @@ class PylonCameraWrapper(FrameProviderAbc, SettingPersistentCameraAbc):
             image = self.__pylon_image_converter.Convert(grab_image_result).GetArray(),
             timestamp = datetime.datetime.now(),
             camera = CameraEnum.Pylon,
+            pixel_format = self.__pixel_format,
             additional_info = {
                 "camera_name": self.__camera_name
             }
